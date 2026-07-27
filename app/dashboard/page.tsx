@@ -1,15 +1,17 @@
 "use client";
 import { 
   FiBell, FiClipboard, FiLayers, FiRefreshCcw, FiZap,
-  FiClock, FiAlertTriangle, FiCheckCircle, FiInbox, FiEye, FiPlus
+  FiClock, FiAlertTriangle, FiCheckCircle, FiInbox, FiEye, FiPlus, FiArrowRight
 } from "react-icons/fi";
 import { useState, useEffect } from "react";
+import Link from "next/link";
 
 export default function Dashboard() {
     const [activeTab, setActiveTab] = useState("dashboard");
     const [workspaces, setWorkspaces] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [userEmail, setUserEmail] = useState(""); 
+    const [userName, setUserName] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -32,6 +34,7 @@ export default function Dashboard() {
       }
       
       setUserEmail(email);
+      setUserName(email.split('@')[0]);
 
       try {
         const res = await fetch(`http://localhost:8081/api/v1/workspaces/user/${email}`, {
@@ -132,6 +135,14 @@ export default function Dashboard() {
     const activeInWorkspace = workspace.issues.filter((issue: any) => issue.status !== "Done").length;
     return total + activeInWorkspace;
   }, 0);
+
+  // --- DİNAMİK TEAM ACTIVITY VERİSİ ---
+  const activities = [
+    { id: 1, user: userName || "User", action: "created project", target: "project", time: "2m ago", badgeType: "project" },
+    { id: 2, user: userName || "User", action: "activated cycle", target: "cycle_activated", time: "1h ago", badgeType: "cycle" },
+    { id: 3, user: userName || "User", action: "created cycle", target: "cycle_created", time: "2h ago", badgeType: "cycle" },
+    { id: 4, user: userName || "User", action: "closed cycle", target: "cycle_closed", time: "5h ago", badgeType: "cycle" },
+  ];
 
   return (
     <div className="w-full h-full text-[14px] font-sans antialiased text-slate-800 dark:text-[#e2e8f0] pb-24 transition-colors duration-200">
@@ -344,57 +355,41 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] rounded-xl flex flex-col h-[340px] shadow-sm dark:shadow-none transition-colors duration-200">
-              <div className="flex justify-between items-center p-5 border-b border-gray-200 dark:border-[#1e232d]">
+            <div className="bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] rounded-xl flex flex-col h-[340px] shadow-sm dark:shadow-none transition-colors duration-200 overflow-hidden">
+              <div className="flex justify-between items-center p-5 border-b border-gray-200 dark:border-[#1e232d] shrink-0">
                 <h2 className="text-slate-900 dark:text-white text-[16px] font-bold tracking-wide">Team Activity</h2>
                 <div className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-500 dark:bg-[#22c55e]"></span>
                   <span className="text-green-600 dark:text-[#22c55e] text-[12px] font-semibold">Live</span>
                 </div>
               </div>
-              <div className="flex flex-col">
-                <div className="flex items-start gap-4 p-5 border-b border-gray-100 dark:border-[#1e232d]">
-                  <div className="font-bold text-blue-500 dark:text-[#5c9dff] text-[14px] mt-0.5">v</div>
-                  <div className="flex flex-col gap-1.5">
-                    <p className="text-[14px] text-gray-500 dark:text-[#848d9c]">
-                      <span className="text-slate-900 dark:text-white font-semibold mr-1">vhhkg</span> 
-                      created "Issue title"
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <span className="bg-blue-50 dark:bg-[#1c2436] text-blue-600 dark:text-[#5c9dff] text-[11px] px-2 py-0.5 rounded font-medium">issue</span>
-                      <span className="text-gray-400 dark:text-[#5e5f64] text-[12px]">4d ago</span>
+              
+              {/* --- GÜNCEL TEAM ACTIVITY (MAP İLE DİNAMİK YAPILDI) --- */}
+              <div className="flex flex-col overflow-y-auto custom-scrollbar">
+                {activities.map((activity, index) => (
+                  <div key={activity.id} className={`flex items-start gap-4 p-5 ${index !== activities.length - 1 ? 'border-b border-gray-100 dark:border-[#1e232d]' : ''}`}>
+                    <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-[#1c2436] flex items-center justify-center text-blue-600 dark:text-[#5c9dff] font-bold text-[12px] shrink-0 mt-0.5">
+                      {activity.user.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <p className="text-[14px] text-gray-500 dark:text-[#848d9c]">
+                        <span className="text-slate-900 dark:text-white font-semibold mr-1">{activity.user}</span> 
+                        {activity.action}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        {activity.badgeType === "project" && (
+                          <span className="bg-purple-50 dark:bg-[#2c1d3b] text-purple-600 dark:text-[#a855f7] text-[11px] px-2 py-0.5 rounded font-medium">{activity.target || "project"}</span>
+                        )}
+                        {activity.badgeType === "cycle" && (
+                          <span className="bg-blue-50 dark:bg-[#1c2436] text-blue-600 dark:text-[#5c9dff] text-[11px] px-2 py-0.5 rounded font-medium">{activity.target || "cycle"}</span>
+                        )}
+                        <span className="text-gray-400 dark:text-[#5e5f64] text-[12px]">{activity.time}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-                
-                <div className="flex items-start gap-4 p-5 border-b border-gray-100 dark:border-[#1e232d]">
-                  <div className="font-bold text-blue-500 dark:text-[#5c9dff] text-[14px] mt-0.5">v</div>
-                  <div className="flex flex-col gap-1.5">
-                    <p className="text-[14px] text-gray-500 dark:text-[#848d9c]">
-                      <span className="text-slate-900 dark:text-white font-semibold mr-1">vhhkg</span> 
-                      column_created column
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <span className="bg-gray-100 dark:bg-[#1e232d] text-gray-600 dark:text-[#848d9c] text-[11px] px-2 py-0.5 rounded font-medium">column</span>
-                      <span className="text-gray-400 dark:text-[#5e5f64] text-[12px]">4d ago</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4 p-5">
-                  <div className="font-bold text-blue-500 dark:text-[#5c9dff] text-[14px] mt-0.5">v</div>
-                  <div className="flex flex-col gap-1.5">
-                    <p className="text-[14px] text-gray-500 dark:text-[#848d9c]">
-                      <span className="text-slate-900 dark:text-white font-semibold mr-1">vhhkg</span> 
-                      created project
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <span className="bg-purple-50 dark:bg-[#2c1d3b] text-purple-600 dark:text-[#a855f7] text-[11px] px-2 py-0.5 rounded font-medium">project</span>
-                      <span className="text-gray-400 dark:text-[#5e5f64] text-[12px]">4d ago</span>
-                    </div>
-                  </div>
-                </div>
+                ))}
               </div>
+
             </div>
           </div>
 
@@ -425,9 +420,13 @@ export default function Dashboard() {
                         <span className="text-gray-500 dark:text-[#848d9c] text-[12px] mt-0.5">Admin</span>
                       </div>
                     </div>
-                    <button className="text-blue-600 dark:text-[#5c9dff] text-[13px] font-medium text-left hover:underline w-max flex items-center gap-1 cursor-pointer">
-                      View projects <span>→</span>
-                    </button>
+                    {/* URL "/dashboard/project/overview" olarak GÜNCELLENDİ */}
+                    <Link 
+                      href="/dashboard/project/overview"
+                      className="mt-auto flex items-center gap-1.5 text-[13px] font-bold text-blue-600 dark:text-[#5c9dff] hover:text-blue-800 dark:hover:text-[#4a8bee] transition-colors w-max cursor-pointer"
+                    >
+                      View projects <FiArrowRight className="mt-0.5" />
+                    </Link>
                   </div>
                 ))
               ) : (
