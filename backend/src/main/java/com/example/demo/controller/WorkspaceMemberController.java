@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -37,44 +38,49 @@ public class WorkspaceMemberController {
     @Autowired
     private UserRepository userRepository;
 
-    // BİLDİRİM VE WORKSPACE İÇİN GEREKLİ REPOSITORY'LER
     @Autowired
     private NotificationRepository notificationRepository;
 
     @Autowired
     private WorkspaceRepository workspaceRepository;
 
-    // YARDIMCI METOT: İsteği yapan kullanıcının o çalışma alanında "ADMIN" olup olmadığını kontrol eder
     private boolean isCurrentUserAdmin(Long workspaceId) {
         String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
         return memberRepository.findByWorkspaceId(workspaceId).stream()
                 .anyMatch(m -> m.getUserEmail().equals(currentUserEmail) && "ADMIN".equals(m.getRole()) && "ACCEPTED".equals(m.getStatus()));
     }
 
-    // YARDIMCI METOT: İsteği yapan kullanıcının o çalışma alanında "Kabul Etmiş" bir üye olup olmadığını kontrol eder
     private boolean isCurrentUserMember(Long workspaceId) {
         String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
         return memberRepository.findByWorkspaceId(workspaceId).stream()
                 .anyMatch(m -> m.getUserEmail().equals(currentUserEmail) && "ACCEPTED".equals(m.getStatus()));
     }
 
-    // Belirli bir Workspace'in SADECE KABUL ETMİŞ üyelerini listele
     @GetMapping("/{workspaceId}")
     public ResponseEntity<?> getMembers(@PathVariable Long workspaceId) {
-        if (!isCurrentUserMember(workspaceId)) {
+        boolean isAdmin = isCurrentUserAdmin(workspaceId);
+        boolean isMember = isCurrentUserMember(workspaceId);
+
+        if (!isAdmin && !isMember) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Bu çalışma alanını görüntüleme yetkiniz yok.");
         }
         
-        List<WorkspaceMember> activeMembers = memberRepository.findByWorkspaceId(workspaceId)
-                .stream().filter(m -> "ACCEPTED".equals(m.getStatus())).toList();
-                
-        return ResponseEntity.ok(activeMembers);
+        List<WorkspaceMember> allMembers = memberRepository.findByWorkspaceId(workspaceId);
+        
+        // DÜZELTME: Adminler davet edilen (PENDING) kişileri de listesinde görebilsin
+        if (isAdmin) {
+            return ResponseEntity.ok(allMembers);
+        } else {
+            // Normal üyeler sadece daveti kabul edenleri görebilir
+            List<WorkspaceMember> activeMembers = allMembers.stream()
+                    .filter(m -> "ACCEPTED".equals(m.getStatus()))
+                    .toList();
+            return ResponseEntity.ok(activeMembers);
+        }
     }
 
-    // Workspace'e yeni üye davet et ve BİLDİRİM OLUŞTUR
     @PostMapping("/{workspaceId}/add")
     public ResponseEntity<?> addMember(@PathVariable Long workspaceId, @RequestBody WorkspaceMember member) {
-        // Sadece Adminler davet gönderebilir
         if (!isCurrentUserAdmin(workspaceId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Sadece adminler yeni üye davet edebilir.");
         }
@@ -89,14 +95,14 @@ public class WorkspaceMemberController {
         }
 
         member.setWorkspaceId(workspaceId);
-        member.setStatus("PENDING"); // Davet beklemede olarak kaydedilir
+        member.setStatus("PENDING"); 
         if (member.getRole() == null || member.getRole().isEmpty()) {
             member.setRole("MEMBER");
         }
         
         WorkspaceMember savedMember = memberRepository.save(member);
 
-        // İŞTE EKSİK OLAN BİLDİRİM KAYDETME KISMI BURASI:
+        // BİLDİRİM OLUŞTURMA KISMI EKSİKSİZ HALE GETİRİLDİ
         try {
             String adminEmail = SecurityContextHolder.getContext().getAuthentication().getName();
             Workspace workspace = workspaceRepository.findById(workspaceId).orElse(null);
@@ -107,6 +113,7 @@ public class WorkspaceMemberController {
             notification.setTitle("Yeni Çalışma Alanı Daveti");
             notification.setMessage(adminEmail + " sizi \"" + workspaceName + "\" çalışma alanına davet etti.");
             notification.setRead(false);
+            notification.setCreatedAt(LocalDateTime.now()); // EKSİK OLAN ZAMAN DAMGASI
             
             notificationRepository.save(notification);
         } catch (Exception e) {
@@ -116,7 +123,6 @@ public class WorkspaceMemberController {
         return ResponseEntity.ok(savedMember);
     }
 
-    // Daveti Kabul Etme (Kullanıcı kendi davetini onaylar)
     @PutMapping("/{workspaceId}/accept-invite")
     public ResponseEntity<?> acceptInvite(@PathVariable Long workspaceId) {
         String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -133,7 +139,6 @@ public class WorkspaceMemberController {
         return ResponseEntity.badRequest().body("Geçerli bir davet bulunamadı.");
     }
 
-    // Üye Çıkarma (Silme) İşlemi - SADECE ADMIN YAPABİLİR
     @DeleteMapping("/{workspaceId}/remove/{email}")
     public ResponseEntity<?> removeMember(@PathVariable Long workspaceId, @PathVariable String email) {
         if (!isCurrentUserAdmin(workspaceId)) {
@@ -153,7 +158,6 @@ public class WorkspaceMemberController {
         return ResponseEntity.badRequest().body("Üye bulunamadı.");
     }
 
-    // Üye Rolünü Güncelleme İşlemi - SADECE ADMIN YAPABİLİR
     @PutMapping("/{workspaceId}/update-role/{email}")
     public ResponseEntity<?> updateRole(@PathVariable Long workspaceId, @PathVariable String email, @RequestBody Map<String, String> body) {
         if (!isCurrentUserAdmin(workspaceId)) {

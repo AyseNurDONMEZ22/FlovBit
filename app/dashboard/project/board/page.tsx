@@ -2,8 +2,10 @@
 import { useState, useEffect } from "react";
 import { FiPlus, FiSearch, FiFilter, FiMoreHorizontal, FiX } from "react-icons/fi";
 import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export default function BoardPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const projectIdParam = searchParams.get("projectId");
   const savedProjectId = typeof window !== 'undefined' ? localStorage.getItem("currentProjectId") : null;
@@ -240,11 +242,12 @@ export default function BoardPage() {
                   <div className="flex flex-col gap-3 overflow-y-auto pb-4 custom-scrollbar min-h-[150px] rounded-xl">
                     {colIssues.map((task) => (
                       <div 
-                        key={task.id}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, task.id)}
-                        className={`bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] hover:border-blue-300 dark:hover:border-[#2a3140] rounded-xl p-4 cursor-grab active:cursor-grabbing group transition-all shadow-sm dark:shadow-none ${draggedIssueId === task.id ? 'opacity-50' : 'opacity-100'}`}
-                      >
+                     key={task.id}
+                     draggable
+                     onDragStart={(e) => handleDragStart(e, task.id)}
+                     onClick={() => router.push(`/dashboard/project/issue/${task.id}`)}
+                     className={`bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] hover:border-blue-300 dark:hover:border-[#2a3140] rounded-xl p-4 cursor-pointer group transition-all shadow-sm dark:shadow-none ${draggedIssueId === task.id ? 'opacity-50' : 'opacity-100'}`}
+                  >
                         <div className="flex items-start justify-between mb-2">
                           <span className="text-gray-400 dark:text-[#848d9c] text-[11px] font-mono">#{task.id}</span>
                           <button className="text-gray-400 dark:text-[#848d9c] opacity-0 group-hover:opacity-100 hover:text-slate-900 dark:hover:text-white transition-all">

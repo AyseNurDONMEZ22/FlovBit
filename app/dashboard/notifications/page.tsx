@@ -22,7 +22,8 @@ export default function NotificationsPage() {
       });
       if (response.ok) {
         const data = await response.json();
-        setNotifications(data);
+        // Yeni bildirimlerin en üstte gelmesi için ters çeviriyoruz
+        setNotifications(data.reverse());
       }
     } catch (error) {
       console.error("Bildirimler çekilemedi:", error);
@@ -59,6 +60,32 @@ export default function NotificationsPage() {
     }
   };
 
+  // Daveti Kabul Etme Fonksiyonu
+  const handleAcceptInvite = async (notificationId: number) => {
+    const token = localStorage.getItem("token");
+    
+    // Güvenlik amaçlı: Kabul edilecek Workspace ID'sini alıyoruz (Gelecekte Notification objesinin içine eklenebilir)
+    const wsId = prompt("Katılmak istediğiniz Workspace ID'sini doğrulayın:");
+    if (!wsId) return;
+
+    try {
+      const res = await fetch(`http://localhost:8081/api/v1/workspaces/members/${wsId}/accept-invite`, {
+        method: "PUT",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        await markAsRead(notificationId); // Kabul edilince otomatik okundu yap
+        alert("Daveti başarıyla kabul ettiniz! Artık çalışma alanına erişebilirsiniz.");
+        fetchNotifications();
+      } else {
+        alert("Davet kabul edilirken bir hata oluştu. Doğru ID girdiğinizden emin olun.");
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   const filteredNotifications = notifications.filter(notif => {
     const isNotifRead = notif.read === true || notif.isRead === true;
     return activeTab === "unread" ? !isNotifRead : true;
@@ -85,13 +112,13 @@ export default function NotificationsPage() {
         </div>
         <div className="flex items-center gap-4">
           {unreadCount > 0 && (
-            <button onClick={markAllAsRead} className="flex items-center gap-2 text-gray-500 dark:text-[#848d9c] hover:text-slate-900 dark:hover:text-white text-[13px] font-medium transition-colors">
+            <button onClick={markAllAsRead} className="flex items-center gap-2 text-gray-500 dark:text-[#848d9c] hover:text-slate-900 dark:hover:text-white text-[13px] font-medium transition-colors cursor-pointer">
               <FiCheckCircle size={16} /> Mark all as read
             </button>
           )}
           <div className="flex items-center p-1 bg-transparent border border-gray-200 dark:border-[#2a2f3a] rounded-full">
-            <button onClick={() => setActiveTab("all")} className={`px-5 py-1.5 text-[13px] font-medium rounded-full transition-colors ${activeTab === "all" ? "bg-gray-200 dark:bg-[#26282b] text-slate-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-[#848d9c] hover:text-slate-900 dark:hover:text-white"}`}>All</button>
-            <button onClick={() => setActiveTab("unread")} className={`px-5 py-1.5 text-[13px] font-medium rounded-full transition-colors ${activeTab === "unread" ? "bg-gray-200 dark:bg-[#26282b] text-slate-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-[#848d9c] hover:text-slate-900 dark:hover:text-white"}`}>Unread</button>
+            <button onClick={() => setActiveTab("all")} className={`px-5 py-1.5 text-[13px] font-medium rounded-full transition-colors cursor-pointer ${activeTab === "all" ? "bg-gray-200 dark:bg-[#26282b] text-slate-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-[#848d9c] hover:text-slate-900 dark:hover:text-white"}`}>All</button>
+            <button onClick={() => setActiveTab("unread")} className={`px-5 py-1.5 text-[13px] font-medium rounded-full transition-colors cursor-pointer ${activeTab === "unread" ? "bg-gray-200 dark:bg-[#26282b] text-slate-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-[#848d9c] hover:text-slate-900 dark:hover:text-white"}`}>Unread</button>
           </div>
         </div>
       </div>
@@ -124,11 +151,29 @@ export default function NotificationsPage() {
                     <span className="text-gray-400 dark:text-[#5e5f64] text-[12px] mt-1 font-mono">{formatDate(notif.createdAt)}</span>
                   </div>
                 </div>
-                {!isRead && (
-                  <button onClick={() => markAsRead(notif.id)} className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 dark:text-[#848d9c] hover:text-blue-600 dark:hover:text-[#5c9dff] hover:bg-blue-50 dark:hover:bg-[#1c2436] transition-colors">
-                    <FiCheck size={16} />
-                  </button>
-                )}
+                
+                {/* Sağ Taraf: Aksiyon Butonları */}
+                <div className="flex items-center gap-3">
+                  {/* Davet Bildirimiyse ve Okunmadıysa Kabul Et Butonu Çıkar */}
+                  {!isRead && notif.title.includes("Davet") && (
+                    <button 
+                      onClick={() => handleAcceptInvite(notif.id)} 
+                      className="bg-blue-600 hover:bg-blue-700 dark:bg-[#5c9dff] dark:hover:bg-[#4a8bee] text-white dark:text-[#0b0d12] px-4 py-1.5 rounded-lg text-[12px] font-bold transition-colors shadow-sm cursor-pointer"
+                    >
+                      Kabul Et
+                    </button>
+                  )}
+                  
+                  {!isRead && (
+                    <button 
+                      onClick={() => markAsRead(notif.id)} 
+                      title="Okundu İşaretle"
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 dark:text-[#848d9c] hover:text-blue-600 dark:hover:text-[#5c9dff] hover:bg-blue-50 dark:hover:bg-[#1c2436] transition-colors cursor-pointer"
+                    >
+                      <FiCheck size={16} />
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })}
