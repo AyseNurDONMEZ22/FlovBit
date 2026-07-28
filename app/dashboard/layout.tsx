@@ -1,7 +1,8 @@
 "use client";
+
 import { 
   FiBell, FiSearch, FiCode, FiCreditCard, FiSettings, FiLogOut, 
-  FiSun, FiMoon, FiPlus, FiLayout, FiColumns, FiList, FiRefreshCw, FiBarChart2 
+  FiSun, FiMoon, FiPlus, FiLayout, FiColumns, FiList, FiRefreshCw, FiBarChart2, FiX 
 } from "react-icons/fi";
 import { TbLayoutDashboard } from "react-icons/tb";
 import Link from "next/link";
@@ -21,9 +22,23 @@ export default function DashboardLayout({
 
   const [userEmail, setUserEmail] = useState("");
   const [userName, setUserName] = useState("");
-  
-  // Bildirimler için yeni state
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // SOL MENÜ İÇİN DİNAMİK PROJE BİLGİLERİ
+  const [currentProjectName, setCurrentProjectName] = useState("Proje Seçin");
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
+
+  // GÖREV EKLEME (ISSUE MODAL) STATE'LERİ
+  const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
+  const [issueTitle, setIssueTitle] = useState("");
+  const [issueDescription, setIssueDescription] = useState("");
+  const [issueStatus, setIssueStatus] = useState("To Do"); // Column
+  const [issuePriority, setIssuePriority] = useState("Medium");
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  
+  // Kullanıcının seçebileceği projeleri tutan liste
+  const [availableProjects, setAvailableProjects] = useState<any[]>([]);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -34,7 +49,6 @@ export default function DashboardLayout({
         setUserEmail(email);
         setUserName(email.split('@')[0]); 
 
-        // Okunmamış bildirim sayısını API'den çek
         if (token) {
           fetch(`http://localhost:8081/api/v1/notifications/user/${email}`, {
             headers: { "Authorization": `Bearer ${token}` }
@@ -52,7 +66,72 @@ export default function DashboardLayout({
           .catch(err => console.error("Bildirimler çekilemedi:", err));
         }
     }
-  }, [pathname]); // pathname değiştiğinde bildirimleri tekrar günceller
+  }, [pathname]);
+
+  // HAFIZAYI SÜREKLİ DİNLEYEREK SOL MENÜYÜ GÜNCELLEYEN EFFECT
+  useEffect(() => {
+    const updateSidebar = () => {
+      const savedName = localStorage.getItem("currentProjectName");
+      const savedId = localStorage.getItem("currentProjectId");
+      if (savedName) setCurrentProjectName(savedName);
+      if (savedId) setCurrentProjectId(savedId);
+    };
+
+    updateSidebar(); 
+    window.addEventListener("projectChanged", updateSidebar);
+
+    return () => window.removeEventListener("projectChanged", updateSidebar);
+  }, []);
+
+  // MODAL AÇILDIĞINDA KULLANICININ TÜM PROJELERİNİ ÇEKER
+  useEffect(() => {
+    if (isIssueModalOpen) {
+      loadUserProjects();
+    }
+  }, [isIssueModalOpen]);
+
+  const loadUserProjects = async () => {
+    setIsLoadingProjects(true);
+    const email = localStorage.getItem("email");
+    const token = localStorage.getItem("token");
+    if (!email || !token) return;
+
+    try {
+      // 1. Önce kullanıcının workspace'lerini çek
+      const wsRes = await fetch(`http://localhost:8081/api/v1/workspaces/user/${email}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (!wsRes.ok) return;
+      const workspaces = await wsRes.json();
+
+      // 2. Her workspace için projeleri çekip tek bir listede birleştir
+      let allProjects: any[] = [];
+      for (const ws of workspaces) {
+        const pRes = await fetch(`http://localhost:8081/api/v1/projects/workspace/${ws.id}`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (pRes.ok) {
+          const projs = await pRes.json();
+          projs.forEach((p: any) => {
+            allProjects.push({ ...p, workspaceName: ws.name });
+          });
+        }
+      }
+      setAvailableProjects(allProjects);
+
+      // Varsayılan olarak hafızadaki projeyi veya listedeki ilk projeyi seçili yap
+      const savedId = localStorage.getItem("currentProjectId");
+      if (savedId && allProjects.find(p => p.id.toString() === savedId)) {
+        setSelectedProjectId(savedId);
+      } else if (allProjects.length > 0) {
+        setSelectedProjectId(allProjects[0].id.toString());
+      }
+    } catch (error) {
+      console.error("Projeler yüklenirken hata:", error);
+    } finally {
+      setIsLoadingProjects(false);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -61,6 +140,54 @@ export default function DashboardLayout({
   };
 
   const currentTheme = theme === "system" ? resolvedTheme : theme;
+
+  // GÖREV OLUŞTURMA FONKSİYONU
+  const handleCreateIssue = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedProjectId) {
+      alert("Lütfen önce bir Board (Proje) seçin.");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    const submitBtn = (e.target as HTMLFormElement).querySelector('button[type="submit"]') as HTMLButtonElement;
+    if (submitBtn) submitBtn.disabled = true;
+
+    try {
+      const response = await fetch("http://localhost:8081/api/v1/issues/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: issueTitle,
+          description: issueDescription, // Yeni eklenen alan
+          status: issueStatus,
+          priority: issuePriority,
+          projectId: parseInt(selectedProjectId) // Seçilen proje (Board)
+        })
+      });
+
+      if (response.ok) {
+        setIssueTitle("");
+        setIssueDescription("");
+        setIssueStatus("To Do");
+        setIssuePriority("Medium");
+        setIsIssueModalOpen(false);
+        
+        // Eğer kullanıcı Board veya Backlog sayfasındaysa anında güncellenmesi için sisteme sinyal gönderiyoruz
+        window.dispatchEvent(new Event("issueCreated"));
+      } else {
+        alert("Görev eklenirken bir hata oluştu.");
+      }
+    } catch (error) {
+      console.error("Görev ekleme hatası:", error);
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+    }
+  };
 
   return (
     <div className="flex h-screen w-full bg-[#f4f7fc] dark:bg-[#0b0d12] text-[14px] font-sans antialiased text-slate-800 dark:text-[#e2e8f0] relative overflow-hidden transition-colors duration-200">
@@ -141,50 +268,62 @@ export default function DashboardLayout({
             </div>
           </div>
 
-          {/* --- RECENT PROJECT MENU --- */}
+          {/* --- RECENT PROJECT MENU (DİNAMİK) --- */}
           <div className="px-3 flex flex-col mt-8">
             <div className="flex items-center justify-between px-3 mb-2">
               <span className="text-[10px] font-bold text-gray-500 dark:text-[#6b7280] tracking-wider uppercase">Recent Project</span>
-              <span className="text-[10px] font-semibold text-gray-400 dark:text-[#848d9c]">My Project</span>
             </div>
+            
+            <div className="px-3 mb-4">
+              {currentProjectId ? (
+                <Link
+                  href={`/dashboard/project/overview?projectId=${currentProjectId}`}
+                  className="block text-[14px] font-bold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-[#5c9dff] transition-colors truncate"
+                >
+                  {currentProjectName}
+                </Link>
+              ) : (
+                <span className="block text-[13px] text-gray-400 italic">No project selected</span>
+              )}
+            </div>
+
             <div className="flex flex-col gap-1">
-              <Link href="/dashboard/project/overview" className={`relative flex items-center w-full rounded-lg transition-colors ${pathname.includes("/project/overview") ? "bg-blue-50 text-blue-600 dark:bg-[#1c2436] dark:text-[#5c9dff]" : "text-gray-600 dark:text-[#949eaf] hover:text-slate-900 hover:bg-gray-50 dark:hover:text-white dark:hover:bg-[#1a1e27]"}`}>
+              <Link href={`/dashboard/project/overview${currentProjectId ? `?projectId=${currentProjectId}` : ""}`} className={`relative flex items-center w-full rounded-lg transition-colors ${pathname.includes("/project/overview") ? "bg-blue-50 text-blue-600 dark:bg-[#1c2436] dark:text-[#5c9dff]" : "text-gray-600 dark:text-[#949eaf] hover:text-slate-900 hover:bg-gray-50 dark:hover:text-white dark:hover:bg-[#1a1e27]"}`}>
                 {pathname.includes("/project/overview") && <div className="absolute left-[-12px] top-1/2 -translate-y-1/2 w-[4px] h-[20px] bg-blue-600 dark:bg-[#5c9dff] rounded-r-md"></div>}
                 <div className="flex items-center gap-3 w-full px-3 py-2 font-medium">
                   <FiLayout className="text-[18px]" /> <span>Overview</span>
                 </div>
               </Link>
               
-              <Link href="/dashboard/project/board" className={`relative flex items-center w-full rounded-lg transition-colors ${pathname.includes("/project/board") ? "bg-blue-50 text-blue-600 dark:bg-[#1c2436] dark:text-[#5c9dff]" : "text-gray-600 dark:text-[#949eaf] hover:text-slate-900 hover:bg-gray-50 dark:hover:text-white dark:hover:bg-[#1a1e27]"}`}>
+              <Link href={`/dashboard/project/board${currentProjectId ? `?projectId=${currentProjectId}` : ""}`} className={`relative flex items-center w-full rounded-lg transition-colors ${pathname.includes("/project/board") ? "bg-blue-50 text-blue-600 dark:bg-[#1c2436] dark:text-[#5c9dff]" : "text-gray-600 dark:text-[#949eaf] hover:text-slate-900 hover:bg-gray-50 dark:hover:text-white dark:hover:bg-[#1a1e27]"}`}>
                 {pathname.includes("/project/board") && <div className="absolute left-[-12px] top-1/2 -translate-y-1/2 w-[4px] h-[20px] bg-blue-600 dark:bg-[#5c9dff] rounded-r-md"></div>}
                 <div className="flex items-center gap-3 w-full px-3 py-2 font-medium">
                   <FiColumns className="text-[18px]" /> <span>Board</span>
                 </div>
               </Link>
               
-              <Link href="/dashboard/project/backlog" className={`relative flex items-center w-full rounded-lg transition-colors ${pathname.includes("/project/backlog") ? "bg-blue-50 text-blue-600 dark:bg-[#1c2436] dark:text-[#5c9dff]" : "text-gray-600 dark:text-[#949eaf] hover:text-slate-900 hover:bg-gray-50 dark:hover:text-white dark:hover:bg-[#1a1e27]"}`}>
+              <Link href={`/dashboard/project/backlog${currentProjectId ? `?projectId=${currentProjectId}` : ""}`} className={`relative flex items-center w-full rounded-lg transition-colors ${pathname.includes("/project/backlog") ? "bg-blue-50 text-blue-600 dark:bg-[#1c2436] dark:text-[#5c9dff]" : "text-gray-600 dark:text-[#949eaf] hover:text-slate-900 hover:bg-gray-50 dark:hover:text-white dark:hover:bg-[#1a1e27]"}`}>
                 {pathname.includes("/project/backlog") && <div className="absolute left-[-12px] top-1/2 -translate-y-1/2 w-[4px] h-[20px] bg-blue-600 dark:bg-[#5c9dff] rounded-r-md"></div>}
                 <div className="flex items-center gap-3 w-full px-3 py-2 font-medium">
                   <FiList className="text-[18px]" /> <span>Backlog</span>
                 </div>
               </Link>
               
-              <Link href="/dashboard/project/cycles" className={`relative flex items-center w-full rounded-lg transition-colors ${pathname.includes("/project/cycles") ? "bg-blue-50 text-blue-600 dark:bg-[#1c2436] dark:text-[#5c9dff]" : "text-gray-600 dark:text-[#949eaf] hover:text-slate-900 hover:bg-gray-50 dark:hover:text-white dark:hover:bg-[#1a1e27]"}`}>
+              <Link href={`/dashboard/project/cycles${currentProjectId ? `?projectId=${currentProjectId}` : ""}`} className={`relative flex items-center w-full rounded-lg transition-colors ${pathname.includes("/project/cycles") ? "bg-blue-50 text-blue-600 dark:bg-[#1c2436] dark:text-[#5c9dff]" : "text-gray-600 dark:text-[#949eaf] hover:text-slate-900 hover:bg-gray-50 dark:hover:text-white dark:hover:bg-[#1a1e27]"}`}>
                 {pathname.includes("/project/cycles") && <div className="absolute left-[-12px] top-1/2 -translate-y-1/2 w-[4px] h-[20px] bg-blue-600 dark:bg-[#5c9dff] rounded-r-md"></div>}
                 <div className="flex items-center gap-3 w-full px-3 py-2 font-medium">
                   <FiRefreshCw className="text-[18px]" /> <span>Cycles</span>
                 </div>
               </Link>
               
-              <Link href="/dashboard/project/reports" className={`relative flex items-center w-full rounded-lg transition-colors ${pathname.includes("/project/reports") ? "bg-blue-50 text-blue-600 dark:bg-[#1c2436] dark:text-[#5c9dff]" : "text-gray-600 dark:text-[#949eaf] hover:text-slate-900 hover:bg-gray-50 dark:hover:text-white dark:hover:bg-[#1a1e27]"}`}>
+              <Link href={`/dashboard/project/reports${currentProjectId ? `?projectId=${currentProjectId}` : ""}`} className={`relative flex items-center w-full rounded-lg transition-colors ${pathname.includes("/project/reports") ? "bg-blue-50 text-blue-600 dark:bg-[#1c2436] dark:text-[#5c9dff]" : "text-gray-600 dark:text-[#949eaf] hover:text-slate-900 hover:bg-gray-50 dark:hover:text-white dark:hover:bg-[#1a1e27]"}`}>
                 {pathname.includes("/project/reports") && <div className="absolute left-[-12px] top-1/2 -translate-y-1/2 w-[4px] h-[20px] bg-blue-600 dark:bg-[#5c9dff] rounded-r-md"></div>}
                 <div className="flex items-center gap-3 w-full px-3 py-2 font-medium">
                   <FiBarChart2 className="text-[18px]" /> <span>Reports</span>
                 </div>
               </Link>
 
-              {/* PROJECT SETTINGS EKLENDİ */}
-              <Link href="/dashboard/project/settings" className={`relative flex items-center w-full rounded-lg transition-colors ${pathname.includes("/project/settings") ? "bg-blue-50 text-blue-600 dark:bg-[#1c2436] dark:text-[#5c9dff]" : "text-gray-600 dark:text-[#949eaf] hover:text-slate-900 hover:bg-gray-50 dark:hover:text-white dark:hover:bg-[#1a1e27]"}`}>
+              <Link href={`/dashboard/project/settings${currentProjectId ? `?projectId=${currentProjectId}` : ""}`} className={`relative flex items-center w-full rounded-lg transition-colors ${pathname.includes("/project/settings") ? "bg-blue-50 text-blue-600 dark:bg-[#1c2436] dark:text-[#5c9dff]" : "text-gray-600 dark:text-[#949eaf] hover:text-slate-900 hover:bg-gray-50 dark:hover:text-white dark:hover:bg-[#1a1e27]"}`}>
                 {pathname.includes("/project/settings") && <div className="absolute left-[-12px] top-1/2 -translate-y-1/2 w-[4px] h-[20px] bg-blue-600 dark:bg-[#5c9dff] rounded-r-md"></div>}
                 <div className="flex items-center gap-3 w-full px-3 py-2 font-medium">
                   <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -205,7 +344,7 @@ export default function DashboardLayout({
           </div>
           <button 
             onClick={handleLogout}
-            className="flex items-center gap-3 w-full px-1 text-gray-500 dark:text-[#949eaf] hover:text-red-600 dark:hover:text-red-400 transition-colors font-medium"
+            className="flex items-center gap-3 w-full px-1 text-gray-500 dark:text-[#949eaf] hover:text-red-600 dark:hover:text-red-400 transition-colors font-medium cursor-pointer"
           >
             <FiLogOut className="text-[18px]" />
             <span>Logout</span>
@@ -258,10 +397,115 @@ export default function DashboardLayout({
 
         {children}
 
-        {/* FLOATING ACTION BUTTON */}
-        <button className="fixed bottom-10 right-10 w-14 h-14 bg-blue-600 dark:bg-[#5c9dff] text-white dark:text-[#0b0d12] rounded-full flex items-center justify-center hover:bg-blue-700 dark:hover:bg-[#4a8bee] transition-colors shadow-[0_8px_30px_rgb(0,0,0,0.12)] z-50 cursor-pointer">
+        {/* ON-CLICK EKLENEN FLOATING ACTION BUTTON */}
+        <button 
+          onClick={() => setIsIssueModalOpen(true)}
+          className="fixed bottom-10 right-10 w-14 h-14 bg-blue-600 dark:bg-[#5c9dff] text-white dark:text-[#0b0d12] rounded-full flex items-center justify-center hover:bg-blue-700 dark:hover:bg-[#4a8bee] transition-colors shadow-[0_8px_30px_rgb(0,0,0,0.12)] z-40 cursor-pointer"
+        >
           <FiPlus className="text-[26px]" />
         </button>
+
+        {/* GÖREV OLUŞTURMA MODALI */}
+        {isIssueModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-[#0b0d12]/80 backdrop-blur-sm p-4">
+            <div className="bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] rounded-2xl w-full max-w-lg p-6 shadow-2xl relative transition-colors">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-[18px] font-bold text-slate-900 dark:text-white">Create New Issue</h3>
+                <button 
+                  onClick={() => setIsIssueModalOpen(false)} 
+                  className="text-gray-400 dark:text-[#848d9c] hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                >
+                  <FiX className="text-[20px]" />
+                </button>
+              </div>
+              
+              <form className="space-y-5" onSubmit={handleCreateIssue}>
+                <div>
+                  <label className="block text-[13px] font-semibold text-slate-700 dark:text-[#e2e8f0] mb-1.5">Issue Title *</label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={issueTitle} 
+                    onChange={(e) => setIssueTitle(e.target.value)} 
+                    placeholder="What needs to be done?" 
+                    className="w-full bg-gray-50 dark:bg-[#0b0d12] border border-gray-200 dark:border-[#2a3140] rounded-xl px-4 py-2.5 text-[14px] text-slate-900 dark:text-white outline-none focus:border-blue-500 dark:focus:border-[#5c9dff]" 
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[13px] font-semibold text-slate-700 dark:text-[#e2e8f0] mb-1.5">Description (optional)</label>
+                  <textarea 
+                    value={issueDescription} 
+                    onChange={(e) => setIssueDescription(e.target.value)} 
+                    placeholder="Add more details..." 
+                    rows={3}
+                    className="w-full bg-gray-50 dark:bg-[#0b0d12] border border-gray-200 dark:border-[#2a3140] rounded-xl px-4 py-2.5 text-[14px] text-slate-900 dark:text-white outline-none focus:border-blue-500 dark:focus:border-[#5c9dff] resize-none" 
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[13px] font-semibold text-slate-700 dark:text-[#e2e8f0] mb-1.5">Priority</label>
+                    <select 
+                      value={issuePriority} 
+                      onChange={(e) => setIssuePriority(e.target.value)} 
+                      className="w-full bg-gray-50 dark:bg-[#0b0d12] border border-gray-200 dark:border-[#2a3140] rounded-xl px-4 py-2.5 text-[14px] text-slate-900 dark:text-white outline-none focus:border-blue-500 dark:focus:border-[#5c9dff] appearance-none"
+                    >
+                      <option value="Low">Low</option>
+                      <option value="Medium">Medium</option>
+                      <option value="High">High</option>
+                      <option value="Critical">Critical</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[13px] font-semibold text-slate-700 dark:text-[#e2e8f0] mb-1.5">Column (Status) *</label>
+                    <select 
+                      value={issueStatus} 
+                      onChange={(e) => setIssueStatus(e.target.value)} 
+                      className="w-full bg-gray-50 dark:bg-[#0b0d12] border border-gray-200 dark:border-[#2a3140] rounded-xl px-4 py-2.5 text-[14px] text-slate-900 dark:text-white outline-none focus:border-blue-500 dark:focus:border-[#5c9dff] appearance-none"
+                    >
+                      <option value="To Do">To Do</option>
+                      <option value="In Progress">In Progress</option>
+                      <option value="Done">Done</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[13px] font-semibold text-slate-700 dark:text-[#e2e8f0] mb-1.5">Board (Project) *</label>
+                  {isLoadingProjects ? (
+                    <div className="w-full bg-gray-50 dark:bg-[#0b0d12] border border-gray-200 dark:border-[#2a3140] rounded-xl px-4 py-2.5 text-[14px] text-gray-500 dark:text-[#848d9c]">Yükleniyor...</div>
+                  ) : (
+                    <select 
+                      value={selectedProjectId} 
+                      onChange={(e) => setSelectedProjectId(e.target.value)} 
+                      className="w-full bg-gray-50 dark:bg-[#0b0d12] border border-gray-200 dark:border-[#2a3140] rounded-xl px-4 py-2.5 text-[14px] text-slate-900 dark:text-white outline-none focus:border-blue-500 dark:focus:border-[#5c9dff] appearance-none"
+                    >
+                      {availableProjects.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.workspaceName} / {p.name}
+                        </option>
+                      ))}
+                      {availableProjects.length === 0 && (
+                        <option value="" disabled>Hiçbir proje bulunamadı</option>
+                      )}
+                    </select>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-[#1e232d] mt-2">
+                  <button type="button" onClick={() => setIsIssueModalOpen(false)} className="px-4 py-2 text-gray-500 dark:text-[#848d9c] hover:text-slate-900 dark:hover:text-white text-[13px] font-medium transition-colors cursor-pointer">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={!selectedProjectId} className="bg-blue-600 hover:bg-blue-700 dark:bg-[#5c9dff] dark:hover:bg-[#4a8bee] disabled:opacity-50 text-white dark:text-[#0b0d12] px-6 py-2 rounded-full font-bold text-[13px] transition-colors shadow-sm cursor-pointer">
+                    Create Issue
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
       </main>
     </div>
   );

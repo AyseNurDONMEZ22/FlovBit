@@ -1,6 +1,8 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { FiX } from "react-icons/fi";
+// DİNAMİK ID İÇİN EKLENDİ
+import { useSearchParams } from "next/navigation"; 
 
 // API'den dönecek verinin tipi
 interface Cycle {
@@ -24,17 +26,27 @@ export default function CyclesPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  const CURRENT_PROJECT_ID = 1; // Şimdilik varsayılan proje ID'si 1
+  const searchParams = useSearchParams();
+  const projectIdParam = searchParams.get("projectId");
+  // Önce URL'e bak, yoksa localStorage'a bak
+  const savedProjectId = typeof window !== 'undefined' ? localStorage.getItem("currentProjectId") : null;
+  const currentProjectId = projectIdParam ? parseInt(projectIdParam) : (savedProjectId ? parseInt(savedProjectId) : null);
 
-  // Sayfa yüklendiğinde Cycle'ları getir
+  // Sayfa yüklendiğinde VEYA projectId değiştiğinde Cycle'ları getir
   useEffect(() => {
-    fetchCycles();
-  }, []);
+    if (currentProjectId) {
+      fetchCycles();
+    } else {
+      setIsLoading(false); // ID yoksa yükleniyor durumundan çık
+    }
+  }, [currentProjectId]);
 
   const fetchCycles = async () => {
+    if (!currentProjectId) return; // ID yoksa istek atma
     const token = localStorage.getItem("token");
     try {
-      const response = await fetch(`http://localhost:8081/api/v1/cycles/project/${CURRENT_PROJECT_ID}`, {
+      // DİNAMİK ID KULLANILIYOR
+      const response = await fetch(`http://localhost:8081/api/v1/cycles/project/${currentProjectId}`, {
         headers: {
           "Authorization": `Bearer ${token}`
         }
@@ -50,19 +62,20 @@ export default function CyclesPage() {
     }
   };
 
-  // Yeni Cycle kaydetme fonksiyonu
-  const handleCreateCycle = async (e: React.FormEvent) => {
+ const handleCreateCycle = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentProjectId) return alert("Proje ID bulunamadı, işlem yapılamaz.");
     if (!name || !startDate || !endDate) return alert("Lütfen zorunlu alanları doldurun.");
+
+    // ÇİFT TIKLAMAYI ÖNLEMEK İÇİN BUTONU KİLİTLE
+    const submitBtn = (e.target as HTMLFormElement).querySelector('button[type="submit"]') as HTMLButtonElement;
+    if (submitBtn) submitBtn.disabled = true;
 
     const token = localStorage.getItem("token");
     const newCycle = {
-      name,
-      goal,
-      startDate,
-      endDate,
-      projectId: CURRENT_PROJECT_ID,
-      status: "Planning" // Varsayılan durum
+      name, goal, startDate, endDate,
+      projectId: currentProjectId,
+      status: "Planning" 
     };
 
     try {
@@ -84,15 +97,19 @@ export default function CyclesPage() {
       }
     } catch (error) {
       console.error("Cycle oluşturulurken hata oluştu:", error);
+    } finally {
+      // İŞLEM BİTİNCE BUTONUN KİLİDİNİ AÇ
+      if (submitBtn) submitBtn.disabled = false;
     }
   };
+  
 
   // Cycle Durumunu Güncelleme Fonksiyonu (Planning -> Active -> Closed)
   const handleUpdateStatus = async (id: number, newStatus: string) => {
     const token = localStorage.getItem("token");
     try {
       const response = await fetch(`http://localhost:8081/api/v1/cycles/${id}/status`, {
-        method: "PUT", // BURASI PATCH'TEN PUT'A ÇEVRİLDİ
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
@@ -134,12 +151,22 @@ export default function CyclesPage() {
     return Math.round((elapsed / totalDuration) * 100);
   };
 
+  // EĞER PROJE ID URL'DE YOKSA UYARI VER (Güvenlik Önlemi)
+  if (!currentProjectId) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center p-10">
+        <h2 className="text-xl font-bold text-red-500 mb-2">Hata: Proje Seçilmedi</h2>
+        <p className="text-gray-500">Lütfen önce Dashboard üzerinden bir projeye tıklayın.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full h-full p-6 md:p-8 max-w-[1000px] mx-auto transition-colors duration-200">
       
       {/* Breadcrumb */}
       <div className="text-[13px] font-medium text-gray-500 dark:text-[#848d9c] mb-2">
-        Dashboard / Default Project / Cycles
+        Dashboard / Project {currentProjectId} / Cycles
       </div>
 
       {/* Header */}

@@ -2,66 +2,43 @@ package com.example.demo.entity;
 
 import java.time.LocalDateTime;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-
 
 @Entity
 @Table(name = "issues")
 public class Issue {
-private Long projectId;
-private Long cycleId; // Eğer null ise görev "Backlog" dadır.
-private Long columnId; // Eğer dinamik kolon yapacaksak
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
     private String title;
+    
+    @Column(columnDefinition = "TEXT")
+    private String description;
+    
+    private String status; // To Do, In Progress, Done
+    private String priority; // Low, Medium, High, Critical
+    private Long projectId; // Artık görevler projeye ait
 
-    @Column(nullable = false)
-    private String status = "To Do"; 
+    // İleride "Bana Atananlar" (My Issues) kısmı için kullanacağız
+    private String assigneeEmail; 
 
-    @Column(nullable = false)
-    private String priority = "Low"; 
+    private LocalDateTime createdAt = LocalDateTime.now();
 
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-
-    // BİR Görev, BİR Workspace'e aittir
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "workspace_id", nullable = false)
-    @JsonIgnore // JSON döngüsünü engeller
-    private Workspace workspace;
-
-    // Görevin kime atandığını tutmak için
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "assignee_id")
-    @JsonIgnore
-    private User assignee;
-
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-    }
-
-    // --- Getter ve Setter Metotları ---
+    // GETTER VE SETTER METODLARI
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
@@ -69,12 +46,12 @@ private Long columnId; // Eğer dinamik kolon yapacaksak
     public String getPriority() { return priority; }
     public void setPriority(String priority) { this.priority = priority; }
 
+    public Long getProjectId() { return projectId; }
+    public void setProjectId(Long projectId) { this.projectId = projectId; }
+
+    public String getAssigneeEmail() { return assigneeEmail; }
+    public void setAssigneeEmail(String assigneeEmail) { this.assigneeEmail = assigneeEmail; }
+
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
-
-    public Workspace getWorkspace() { return workspace; }
-    public void setWorkspace(Workspace workspace) { this.workspace = workspace; }
-
-    public User getAssignee() { return assignee; }
-    public void setAssignee(User assignee) { this.assignee = assignee; }
 }

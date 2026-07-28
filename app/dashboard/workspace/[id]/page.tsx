@@ -9,14 +9,13 @@ export default function WorkspaceDetailPage() {
   const router = useRouter();
   const workspaceId = params?.id; 
 
-  const [activeTab, setActiveTab] = useState("projects"); // "projects" veya "members"
+  const [activeTab, setActiveTab] = useState("projects");
   const [workspace, setWorkspace] = useState<any>(null);
   const [projects, setProjects] = useState<any[]>([]);
   const [members, setMembers] = useState<any[]>([]);
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Form State'leri
   const [projectName, setProjectName] = useState("");
   const [projectDesc, setProjectDesc] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
@@ -31,7 +30,6 @@ export default function WorkspaceDetailPage() {
     const token = localStorage.getItem("token");
     const email = localStorage.getItem("email");
     try {
-      // 1. Workspace adını bulmak için kullanıcının workspace'lerini çekiyoruz
       const wsRes = await fetch(`http://localhost:8081/api/v1/workspaces/user/${email}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -41,7 +39,6 @@ export default function WorkspaceDetailPage() {
         setWorkspace(currentWs);
       }
 
-      // 2. Projeleri çek
       const projRes = await fetch(`http://localhost:8081/api/v1/projects/workspace/${workspaceId}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -49,7 +46,6 @@ export default function WorkspaceDetailPage() {
         setProjects(await projRes.json());
       }
 
-      // 3. Üyeleri çek
       const memRes = await fetch(`http://localhost:8081/api/v1/workspaces/members/${workspaceId}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -65,8 +61,10 @@ export default function WorkspaceDetailPage() {
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
+    const submitBtn = (e.target as HTMLFormElement).querySelector('button[type="submit"]') as HTMLButtonElement;
+    if (submitBtn) submitBtn.disabled = true;
 
+    const token = localStorage.getItem("token");
     try {
       const response = await fetch("http://localhost:8081/api/v1/projects/create", {
         method: "POST",
@@ -85,7 +83,6 @@ export default function WorkspaceDetailPage() {
         setIsCreatingProject(false);
         setProjectName("");
         setProjectDesc("");
-        // Projeleri tekrar çekerek listeyi güncelle
         const projRes = await fetch(`http://localhost:8081/api/v1/projects/workspace/${workspaceId}`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
@@ -95,6 +92,8 @@ export default function WorkspaceDetailPage() {
       }
     } catch (error) {
       console.error("Proje oluşturma hatası:", error);
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
     }
   };
 
@@ -130,19 +129,64 @@ export default function WorkspaceDetailPage() {
     }
   };
 
+  const handleRemoveMember = async (emailToRemove: string) => {
+    if (!window.confirm(`${emailToRemove} adresini çalışma alanından çıkarmak istediğinize emin misiniz?`)) return;
+    
+    const token = localStorage.getItem("token");
+    try {
+      const response = await fetch(`http://localhost:8081/api/v1/workspaces/members/${workspaceId}/remove/${emailToRemove}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const memRes = await fetch(`http://localhost:8081/api/v1/workspaces/members/${workspaceId}`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (memRes.ok) setMembers(await memRes.json());
+      } else {
+        alert("Üye çıkarılırken bir hata oluştu.");
+      }
+    } catch (error) {
+      console.error("Üye çıkarma hatası:", error);
+    }
+  };
+
+  const handleUpdateRole = async (emailToUpdate: string, newRole: string) => {
+    const token = localStorage.getItem("token");
+    try {
+      const response = await fetch(`http://localhost:8081/api/v1/workspaces/members/${workspaceId}/update-role/${emailToUpdate}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ role: newRole })
+      });
+      if (response.ok) {
+          const memRes = await fetch(`http://localhost:8081/api/v1/workspaces/members/${workspaceId}`, {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          if (memRes.ok) setMembers(await memRes.json());
+      }
+    } catch (error) {
+      console.error("Rol güncelleme hatası:", error);
+    }
+  };
+
   if (isLoading) return <div className="p-8 text-gray-500">Yükleniyor...</div>;
 
   return (
     <div className="p-8 max-w-[1100px] mx-auto w-full pb-24 font-sans transition-colors duration-200">
       
-      {/* VİDEODAKİ BREADCRUMB */}
+      {/* BREADCRUMB */}
       <div className="flex items-center gap-2 text-[13px] font-medium text-gray-500 dark:text-[#64748b] mb-6">
         <Link href="/dashboard" className="hover:underline hover:text-slate-900 dark:hover:text-white transition-colors">Dashboard</Link>
         <span>/</span>
         <span className="text-slate-900 dark:text-[#e2e8f0] font-bold">{workspace?.name || "Workspace"}</span>
       </div>
 
-      {/* VİDEODAKİ WORKSPACE BAŞLIĞI VE BADGE */}
+      {/* WORKSPACE BAŞLIĞI VE BADGE */}
       <div className="flex items-center gap-3 mb-10">
         <h1 className="text-slate-900 dark:text-white text-[28px] font-bold tracking-tight">{workspace?.name || "Workspace"}</h1>
         <span className="bg-blue-50 text-blue-600 dark:bg-[#1c2436] dark:text-[#5c9dff] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider mt-1">
@@ -150,7 +194,7 @@ export default function WorkspaceDetailPage() {
         </span>
       </div>
 
-      {/* VİDEODAKİ 2'Lİ ÖZET KARTLARI */}
+      {/* 2'Lİ ÖZET KARTLARI */}
       <div className="grid grid-cols-2 gap-6 mb-10">
         <div className="bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] rounded-2xl p-6 shadow-sm dark:shadow-none">
           <span className="text-gray-500 dark:text-[#848d9c] text-[11px] font-bold tracking-wider uppercase">Projects</span>
@@ -193,7 +237,7 @@ export default function WorkspaceDetailPage() {
             )}
           </div>
 
-          {/* VİDEODAKİ NEW PROJECT FORMU */}
+          {/* NEW PROJECT FORMU */}
           {isCreatingProject && (
             <div className="bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] rounded-2xl p-6 mb-8 shadow-sm transition-colors">
               <div className="flex justify-between items-center mb-6">
@@ -230,7 +274,7 @@ export default function WorkspaceDetailPage() {
                 <div className="pt-2">
                   <button 
                     type="submit" 
-                    className="bg-blue-600 dark:bg-[#5c9dff] text-white dark:text-[#0b0d12] px-6 py-2.5 rounded-full text-[14px] font-bold hover:bg-blue-700 dark:hover:bg-[#4a8bee] transition-colors shadow-sm"
+                    className="bg-blue-600 dark:bg-[#5c9dff] text-white dark:text-[#0b0d12] px-6 py-2.5 rounded-full text-[14px] font-bold hover:bg-blue-700 dark:hover:bg-[#4a8bee] transition-colors shadow-sm cursor-pointer"
                   >
                     Create Project
                   </button>
@@ -239,12 +283,19 @@ export default function WorkspaceDetailPage() {
             </div>
           )}
 
-          {/* VİDEODAKİ PROJE KARTLARI */}
+          {/* PROJE KARTLARI */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {projects.map((proj) => (
               <div 
                 key={proj.id} 
-                onClick={() => router.push(`/dashboard/project/overview?projectId=${proj.id}`)}
+                onClick={() => {
+                  // HAFIZAYA KAYDET VE MENÜYÜ GÜNCELLE
+                  localStorage.setItem("currentProjectId", proj.id.toString());
+                  localStorage.setItem("currentProjectName", proj.name);
+                  window.dispatchEvent(new Event("projectChanged"));
+                  
+                  router.push(`/dashboard/project/overview?projectId=${proj.id}`);
+                }}
                 className="bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] hover:border-blue-400 dark:hover:border-[#5c9dff] rounded-2xl p-6 cursor-pointer shadow-sm dark:shadow-none transition-all group"
               >
                 <div className="flex items-center gap-3 mb-6">
@@ -277,7 +328,7 @@ export default function WorkspaceDetailPage() {
                   className="w-full bg-gray-50 dark:bg-[#0b0d12] border border-gray-200 dark:border-[#2a2f3a] rounded-xl pl-11 pr-4 py-2.5 text-[14px] text-slate-900 dark:text-white outline-none focus:border-blue-500"
                 />
               </div>
-              <button type="submit" className="bg-slate-900 dark:bg-white text-white dark:text-[#0b0d12] px-6 py-2.5 rounded-xl text-[13px] font-bold hover:bg-slate-800 transition-colors flex items-center gap-2">
+              <button type="submit" className="bg-slate-900 dark:bg-white text-white dark:text-[#0b0d12] px-6 py-2.5 rounded-xl text-[13px] font-bold hover:bg-slate-800 transition-colors flex items-center gap-2 cursor-pointer">
                 <FiUserPlus /> Send Invite
               </button>
             </form>
@@ -292,15 +343,43 @@ export default function WorkspaceDetailPage() {
                 <div className="flex flex-col divide-y divide-gray-100 dark:divide-[#1e232d]">
                   {members.map((member) => (
                     <div key={member.id} className="flex items-center justify-between p-5">
+                      
+                      {/* Kullanıcı Avatar ve E-posta */}
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-blue-100 dark:bg-[#1c2436] text-blue-600 dark:text-[#5c9dff] rounded-full flex items-center justify-center font-bold text-[14px] uppercase">
                           {member.userEmail.charAt(0)}
                         </div>
                         <span className="text-slate-900 dark:text-white font-bold text-[14px]">{member.userEmail}</span>
                       </div>
-                      <span className={`text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider ${member.role === 'ADMIN' ? 'bg-blue-50 text-blue-600 dark:bg-[#1c2436] dark:text-[#5c9dff]' : 'bg-gray-100 text-gray-600 dark:bg-[#1e232d] dark:text-[#848d9c]'}`}>
-                        {member.role || "MEMBER"}
-                      </span>
+                      
+                      {/* Dinamik Rol Menüsü ve Silme Butonu */}
+                      <div className="flex items-center gap-4">
+                        <select
+                          value={member.role || "MEMBER"}
+                          onChange={(e) => handleUpdateRole(member.userEmail, e.target.value)}
+                          className={`text-[11px] font-bold px-3 py-1.5 rounded-lg uppercase tracking-wider outline-none cursor-pointer border border-transparent hover:border-gray-300 dark:hover:border-gray-600 transition-colors ${
+                            member.role === 'ADMIN' ? 'bg-blue-50 text-blue-600 dark:bg-[#1c2436] dark:text-[#5c9dff]' :
+                            member.role === 'EDITOR' ? 'bg-purple-50 text-purple-600 dark:bg-[#2c1d3b] dark:text-[#a855f7]' :
+                            member.role === 'VIEWER' ? 'bg-amber-50 text-amber-600 dark:bg-[#2d2305] dark:text-[#f59e0b]' :
+                            'bg-gray-100 text-gray-600 dark:bg-[#1e232d] dark:text-[#848d9c]'
+                          }`}
+                        >
+                          <option value="ADMIN">Admin</option>
+                          <option value="EDITOR">Editor</option>
+                          <option value="MEMBER">Member</option>
+                          <option value="VIEWER">Viewer</option>
+                        </select>
+                        
+                        {member.role !== 'ADMIN' && (
+                          <button 
+                            onClick={() => handleRemoveMember(member.userEmail)}
+                            className="text-[12px] font-bold text-red-500 hover:text-red-700 transition-colors cursor-pointer"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+
                     </div>
                   ))}
                 </div>
