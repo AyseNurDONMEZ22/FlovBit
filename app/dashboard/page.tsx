@@ -421,12 +421,13 @@ export default function Dashboard() {
                       </div>
                     </div>
                     {/* URL "/dashboard/project/overview" olarak GÜNCELLENDİ */}
-                    <Link 
-                      href="/dashboard/project/overview"
-                      className="mt-auto flex items-center gap-1.5 text-[13px] font-bold text-blue-600 dark:text-[#5c9dff] hover:text-blue-800 dark:hover:text-[#4a8bee] transition-colors w-max cursor-pointer"
-                    >
-                      View projects <FiArrowRight className="mt-0.5" />
-                    </Link>
+                   {/* GÜNCEL VIEW PROJECTS LINKİ */}
+<Link 
+  href={`/dashboard/workspace/${w.id}`}
+  className="mt-auto flex items-center gap-1.5 text-[13px] font-bold text-blue-600 dark:text-[#5c9dff] hover:text-blue-800 dark:hover:text-[#4a8bee] transition-colors w-max cursor-pointer"
+>
+  View projects <FiArrowRight className="mt-0.5" />
+</Link>
                   </div>
                 ))
               ) : (
