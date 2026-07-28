@@ -28,7 +28,7 @@ public class WorkspaceController {
 
     private final WorkspaceRepository workspaceRepository;
     private final UserRepository userRepository;
-    private final WorkspaceMemberRepository workspaceMemberRepository; // Üyeler için eklendi
+    private final WorkspaceMemberRepository workspaceMemberRepository;
 
     @Autowired
     public WorkspaceController(WorkspaceRepository workspaceRepository, UserRepository userRepository, WorkspaceMemberRepository workspaceMemberRepository) {
@@ -37,7 +37,7 @@ public class WorkspaceController {
         this.workspaceMemberRepository = workspaceMemberRepository;
     }
 
-    // Yeni Workspace Oluşturma Kapısı (SENİN KODUN KORUNDU, SADECE ÜYE EKLEME EKLENDİ)
+    // Yeni Workspace Oluşturma Kapısı
     @PostMapping("/create")
     public ResponseEntity<?> createWorkspace(@RequestBody Map<String, Object> request) {
         try {
@@ -53,11 +53,12 @@ public class WorkspaceController {
 
             Workspace savedWorkspace = workspaceRepository.save(newWorkspace);
 
-            // GÜNCELLEME BURADA: Kurucuyu otomatik Admin olarak üyelere ekliyoruz
+            // Kurucuyu otomatik Admin ve KABUL ETMİŞ üye olarak ekliyoruz
             WorkspaceMember owner = new WorkspaceMember();
             owner.setWorkspaceId(savedWorkspace.getId());
             owner.setUserEmail(email);
             owner.setRole("ADMIN");
+            owner.setStatus("ACCEPTED"); // İŞTE EKSİK OLAN SİHİRLİ SATIR BURASI
             workspaceMemberRepository.save(owner);
 
             return ResponseEntity.ok(savedWorkspace);
@@ -66,12 +67,15 @@ public class WorkspaceController {
         }
     }
 
-    // Kullanıcının Workspace'lerini Listeleme Kapısı (TAMAMEN DİNAMİKLEŞTİRİLDİ)
+    // Kullanıcının Workspace'lerini Listeleme Kapısı
     @GetMapping("/user/{email}")
     public ResponseEntity<?> getUserWorkspaces(@PathVariable String email) {
         try {
-            // 1. Kullanıcının e-postasıyla ekli olduğu tüm üyelikleri bul
-            List<WorkspaceMember> memberships = workspaceMemberRepository.findByUserEmail(email);
+            // 1. Kullanıcının e-postasıyla SADECE KABUL ETTİĞİ üyelikleri bul
+            List<WorkspaceMember> memberships = workspaceMemberRepository.findByUserEmail(email)
+                    .stream()
+                    .filter(m -> "ACCEPTED".equals(m.getStatus())) // İZOLASYON FİLTRESİ
+                    .collect(Collectors.toList());
             
             // 2. Eğer hiç üyeliği yoksa boş liste dön
             if (memberships.isEmpty()) {

@@ -32,7 +32,7 @@ public class SecurityConfig {
     @Autowired
     private JwtFilter jwtFilter; 
 
-    // YENİ: Google/GitHub başarılı giriş yöneticimizi içeri alıyoruz
+    // Google/GitHub başarılı giriş yöneticimizi içeri alıyoruz
     @Autowired
     private OAuth2SuccessHandler oAuth2SuccessHandler; 
 
@@ -47,11 +47,11 @@ public class SecurityConfig {
             
             // 3. İzinler ve Kapılar
             .authorizeHttpRequests(auth -> auth
-                // Tarayıcının ön kontrol (OPTIONS) isteklerine biletsiz izin ver (O meşhur hatanın çözümü!)
+                // Tarayıcının ön kontrol (OPTIONS) isteklerine biletsiz izin ver
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() 
                 
-                // /api/v1/auth/ ile başlayan TÜM isteklere (kayıt ol vb.) şifresiz izin veriyoruz
-                .requestMatchers("/api/v1/auth/**").permitAll() 
+                // Kayıt ve giriş işlemlerine şifresiz izin veriyoruz
+                .requestMatchers("/api/v1/auth/**", "/api/v1/users/register").permitAll() 
                 
                 // Geri kalan HER ŞEY için bilet şart!
                 .anyRequest().authenticated()
@@ -60,9 +60,8 @@ public class SecurityConfig {
             // Bilet kontrolcümüzü (JwtFilter) resmi olarak sisteme dahil ediyoruz
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
 
-            // 4. İŞTE GÜNCELLENEN KISIM: Google ve GitHub ile girişi aktif ediyoruz
+            // 4. Google ve GitHub ile girişi aktif ediyoruz
             .oauth2Login(oauth2 -> oauth2
-                // YENİ: Sabit bir URL yerine, bizim yazdığımız özel sınıfı kullan diyoruz
                 .successHandler(oAuth2SuccessHandler)
             );
         
@@ -77,7 +76,7 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
         // Tüm HTTP metotlarına (POST, GET, OPTIONS vb.) kapıyı açıyoruz
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*")); // authorization header'ı için * önemli
+        configuration.setAllowedHeaders(Arrays.asList("*")); 
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
