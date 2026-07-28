@@ -37,7 +37,7 @@ public class WorkspaceMemberController {
     @Autowired
     private UserRepository userRepository;
 
-    // BİLDİRİM VE WORKSPACE İÇİN EKLENEN REPOSITORY'LER
+    // BİLDİRİM VE WORKSPACE İÇİN GEREKLİ REPOSITORY'LER
     @Autowired
     private NotificationRepository notificationRepository;
 
@@ -71,7 +71,7 @@ public class WorkspaceMemberController {
         return ResponseEntity.ok(activeMembers);
     }
 
-    // Workspace'e yeni üye davet et ve BİLDİRİM GÖNDER
+    // Workspace'e yeni üye davet et ve BİLDİRİM OLUŞTUR
     @PostMapping("/{workspaceId}/add")
     public ResponseEntity<?> addMember(@PathVariable Long workspaceId, @RequestBody WorkspaceMember member) {
         // Sadece Adminler davet gönderebilir
@@ -79,13 +79,11 @@ public class WorkspaceMemberController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Sadece adminler yeni üye davet edebilir.");
         }
 
-        // 1. Kullanıcı veritabanında var mı?
         User targetUser = userRepository.findByEmail(member.getUserEmail()).orElse(null);
         if (targetUser == null) {
             return ResponseEntity.badRequest().body("Bu e-posta adresiyle kayıtlı bir kullanıcı bulunamadı!");
         }
 
-        // 2. Kullanıcı zaten ekli mi veya davet edilmiş mi?
         if (memberRepository.existsByWorkspaceIdAndUserEmail(workspaceId, member.getUserEmail())) {
             return ResponseEntity.badRequest().body("Bu kullanıcı zaten davet edilmiş veya çalışma alanına ekli.");
         }
@@ -98,14 +96,14 @@ public class WorkspaceMemberController {
         
         WorkspaceMember savedMember = memberRepository.save(member);
 
-        // 3. DAVET EDİLEN KULLANICIYA BİLDİRİM OLUŞTURMA
+        // İŞTE EKSİK OLAN BİLDİRİM KAYDETME KISMI BURASI:
         try {
             String adminEmail = SecurityContextHolder.getContext().getAuthentication().getName();
             Workspace workspace = workspaceRepository.findById(workspaceId).orElse(null);
             String workspaceName = workspace != null ? workspace.getName() : "Çalışma Alanı";
 
             Notification notification = new Notification();
-            notification.setUser(targetUser); // Entity'deki User ilişkisi bağlandı
+            notification.setUser(targetUser);
             notification.setTitle("Yeni Çalışma Alanı Daveti");
             notification.setMessage(adminEmail + " sizi \"" + workspaceName + "\" çalışma alanına davet etti.");
             notification.setRead(false);
@@ -162,7 +160,6 @@ public class WorkspaceMemberController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Rolleri sadece adminler değiştirebilir.");
         }
 
-        // Kendi yetkisini düşürmesini engelle
         String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
         if (currentUserEmail.equals(email) && !"ADMIN".equals(body.get("role"))) {
             return ResponseEntity.badRequest().body("Kendi admin yetkinizi kaldıramazsınız.");
