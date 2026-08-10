@@ -1,476 +1,239 @@
 "use client";
-import { useState } from "react";
-import { FiCopy, FiChevronDown } from "react-icons/fi";
+import { useState, useEffect } from "react";
+import { FiCopy, FiTerminal, FiCode, FiBox, FiCheck } from "react-icons/fi";
+import Link from "next/link";
 
 export default function ApiReferencePage() {
-  const [activeTab, setActiveTab] = useState("rest");
-  const [keyExpiration, setKeyExpiration] = useState("Never");
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [copiedStates, setCopiedStates] = useState<{ [key: string]: boolean }>({});
+  
+  // Dinamik ortam değişkenleri (localStorage'dan alınabilir)
+  const [envData, setEnvData] = useState({
+    baseUrl: "http://localhost:8081",
+    userId: "user_...",
+    workspaceId: "ws_...",
+    projectId: "proj_..."
+  });
 
-  // --- MOCK DATA: ENVIRONMENT ---
-  const envData = [
-    { label: "Base URL", value: "https://flovbit.codifya.com" },
-    { label: "userId", value: "JvO38RYhUQg2WQPATF96" },
-    { label: "workspaceId", value: "{workspaceId} Open a workspace", isLink: true },
-    { label: "projectId", value: "RWhItYv_3bAKClT4n4Ug" },
-  ];
+  useEffect(() => {
+    // Sayfa yüklendiğinde mevcut localStorage verileriyle ortamı doldur
+    const email = localStorage.getItem("email") || "test@example.com";
+    const wsId = localStorage.getItem("currentWorkspaceId") || "ws_default";
+    const projId = localStorage.getItem("currentProjectId") || "proj_default";
+    
+    setEnvData({
+      baseUrl: "http://localhost:8081",
+      userId: email,
+      workspaceId: wsId,
+      projectId: projId
+    });
+  }, []);
 
-  // --- MOCK DATA: REST API ---
-  const restEndpoints = [
-    {
-      category: "Auth",
-      items: [
-        { method: "POST", path: "/api/auth/login", desc: "Login with email/password" },
-        { method: "POST", path: "/api/auth/register", desc: "Register new user" },
-        { method: "GET", path: "/api/auth/me", desc: "Get current user info" },
-      ]
-    },
-    {
-      category: "Workspaces",
-      items: [
-        { method: "GET", path: "/api/workspaces", desc: "List user workspaces" },
-        { method: "POST", path: "/api/workspaces", desc: "Create workspace" },
-        { method: "GET", path: "/api/workspaces/{id}", desc: "Get workspace" },
-        { method: "GET", path: "/api/workspaces/{id}/members", desc: "List members" },
-        { method: "POST", path: "/api/workspaces/{id}/members", desc: "Invite member" },
-      ]
-    },
-    {
-      category: "Projects",
-      items: [
-        { method: "GET", path: "/api/workspaces/{id}/projects", desc: "List projects" },
-        { method: "POST", path: "/api/workspaces/{id}/projects", desc: "Create project" },
-        { method: "GET", path: "/api/projects/{id}", desc: "Get project" },
-        { method: "PATCH", path: "/api/projects/{id}", desc: "Update project" },
-        { method: "DELETE", path: "/api/projects/{id}", desc: "Delete project" },
-        { method: "GET", path: "/api/projects/{id}/boards", desc: "List boards" },
-      ]
-    },
-    {
-      category: "Issues",
-      items: [
-        { method: "POST", path: "/api/boards/{id}/issues", desc: "Create issue" },
-        { method: "GET", path: "/api/issues/{id}", desc: "Get issue" },
-        { method: "PATCH", path: "/api/issues/{id}", desc: "Update issue" },
-        { method: "DELETE", path: "/api/issues/{id}", desc: "Delete issue" },
-        { method: "GET", path: "/api/users/me/issues", desc: "My assigned issues" },
-      ]
-    },
-    {
-      category: "Cycles",
-      items: [
-        { method: "GET", path: "/api/projects/{id}/cycles", desc: "List cycles" },
-        { method: "POST", path: "/api/projects/{id}/cycles", desc: "Create cycle" },
-        { method: "POST", path: "/api/cycles/{id}/activate", desc: "Start cycle" },
-        { method: "POST", path: "/api/cycles/{id}/close", desc: "Close cycle" },
-        { method: "POST", path: "/api/cycles/{id}/issues/{issueId}", desc: "Add issue to cycle" },
-      ]
-    },
-    {
-      category: "Activity & Dashboard",
-      items: [
-        { method: "GET", path: "/api/activity?workspaceId={workspaceId}", desc: "Activity log" },
-        { method: "GET", path: "/api/dashboard/stats?projectId={projectId}", desc: "Dashboard stats" },
-        { method: "GET", path: "/api/dashboard/activity?workspaceId={workspaceId}", desc: "Dashboard activity" },
-      ]
-    }
-  ];
-
-  // --- MOCK DATA: MCP TOOLS ---
-  const mcpTools = [
-    { name: "create_issue", desc: "Create a new issue in a project", params: ["userId", "projectId", "title", "columnId", "description?", "assigneeId?", "priority?", "dueDate?", "labelIds?"], example: 'Example: "Create a HIGH priority issue for the login bug"' },
-    { name: "create_issues", desc: "Bulk-create many issues in one call (preferred for backlogs)", params: ["userId", "projectId", "columnId", "priority?", "issues[] (1-100)"], example: 'Example: "Create issues from this PRD all at once"' },
-    { name: "update_issue", desc: "Update an existing issue", params: ["userId", "issueId", "title?", "description?", "columnId?", "assigneeId?", "priority?", "dueDate?"], example: 'Example: "Set this issue\'s priority to MEDIUM"' },
-    { name: "move_issue", desc: "Move issue to a different column", params: ["userId", "issueId", "columnId"], example: 'Example: "Move this issue to the \'In Progress\' column"' },
-    { name: "add_comment", desc: "Add a comment to an issue", params: ["userId", "issueId", "content"], example: 'Example: "Add the comment \'tested after deploy\' to this issue"' },
-    { name: "create_project", desc: "Create a new project in a workspace", params: ["userId", "workspaceId", "name", "description?"], example: 'Example: "Create a project named \'Mobile App\' in the workspace"' },
-    { name: "create_board", desc: "Create a new board in a project", params: ["userId", "projectId", "name"], example: 'Example: "Create a board named \'Sprint Board\' in this project"' },
-    { name: "invite_member", desc: "Invite a user to workspace by email", params: ["userId", "workspaceId", "email", "role"], example: 'Example: "Invite ali@company.com to the workspace as a member"' },
-    { name: "create_cycle", desc: "Create a sprint/cycle in a project", params: ["userId", "projectId", "name", "startDate", "endDate", "goal?"], example: 'Example: "Create a 2-week \'Sprint 3\' cycle"' },
-    { name: "start_cycle", desc: "Activate a planned cycle", params: ["userId", "cycleId"], example: 'Example: "Start planned Sprint 3"' },
-    { name: "close_cycle", desc: "Close an active cycle", params: ["userId", "cycleId"], example: 'Example: "Close the active cycle"' },
-    { name: "assign_issue_to_cycle", desc: "Add an issue to a cycle", params: ["userId", "cycleId", "issueId"], example: 'Example: "Add this issue to the current sprint"' },
-    { name: "search_issues", desc: "Search issues by text", params: ["userId", "query", "projectId?", "assigneeId?", "priority?"], example: 'Example: "Find all issues that mention \'payment\'"' },
-    { name: "get_notifications", desc: "Get recent notifications", params: ["userId"], example: 'Example: "Show my recent notifications"' },
-  ];
-
-  const mcpPrompts = [
-    { name: "break_prd_into_issues", desc: "Break down a PRD into actionable issues", params: ["prd", "projectId?"] },
-    { name: "summarize_cycle_risk", desc: "Analyze cycle risks and recommendations", params: ["cycleSummary", "issueList"] },
-    { name: "summarize_project_status", desc: "Generate project status summary", params: ["projectSummary"] },
-    { name: "daily_standup", desc: "Generate daily standup update", params: ["userId", "projectSummary"] },
-    { name: "sprint_retrospective", desc: "Generate retrospective talking points", params: ["cycleReport"] },
-  ];
-
-  const getMethodColor = (method: string) => {
-    switch (method) {
-      case "GET": return "bg-green-100 text-green-600 dark:bg-[#22c55e]/10 dark:text-[#22c55e]";
-      case "POST": return "bg-blue-100 text-blue-600 dark:bg-[#3b82f6]/10 dark:text-[#3b82f6]";
-      case "PATCH": return "bg-yellow-100 text-yellow-600 dark:bg-[#eab308]/10 dark:text-[#eab308]";
-      case "DELETE": return "bg-red-100 text-red-600 dark:bg-[#ef4444]/10 dark:text-[#ef4444]";
-      default: return "bg-gray-100 text-gray-500 dark:bg-gray-500/10 dark:text-gray-400";
-    }
+  const handleCopy = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedStates({ ...copiedStates, [id]: true });
+    setTimeout(() => {
+      setCopiedStates({ ...copiedStates, [id]: false });
+    }, 2000);
   };
 
+  const CopyButton = ({ text, id }: { text: string, id: string }) => (
+    <button 
+      onClick={() => handleCopy(text, id)}
+      className="text-gray-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+      title="Kopyala"
+    >
+      {copiedStates[id] ? <FiCheck className="text-green-500" /> : <FiCopy />}
+    </button>
+  );
+
   return (
-    <div className="p-8 max-w-[1100px] mx-auto w-full pb-24 font-sans transition-colors duration-200">
+    <div className="p-8 max-w-[1000px] mx-auto w-full font-sans transition-colors duration-200 pb-24 animate-in fade-in">
       
-      {/* BAŞLIK ALANI */}
-      <h1 className="text-slate-900 dark:text-white text-[28px] font-bold tracking-tight mb-2">API & MCP Guide</h1>
-      <p className="text-gray-500 dark:text-[#848d9c] text-[15px] mb-8">Programmatic integration with FlovBit - step by step, filled with your environment.</p>
+      {/* HEADER */}
+      <div className="mb-10">
+        <h1 className="text-[28px] font-bold text-slate-900 dark:text-white tracking-tight leading-tight">API & MCP Guide</h1>
+        <p className="text-[14px] text-gray-500 dark:text-[#848d9c] mt-2">
+          Programmatic integration with FlowBit — step by step, filled with your environment.
+        </p>
+      </div>
 
-      {/* YOUR ENVIRONMENT BÖLÜMÜ */}
+      {/* YOUR ENVIRONMENT */}
       <div className="mb-12">
-        <h3 className="text-slate-900 dark:text-white text-[14px] font-semibold mb-4">Your Environment <span className="text-gray-500 dark:text-[#848d9c] font-normal">— auto-filled - used in commands</span></h3>
-        <div className="bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] rounded-xl overflow-hidden flex flex-wrap shadow-sm dark:shadow-none transition-colors">
-          {envData.map((item, idx) => (
-            <div key={idx} className={`flex-1 min-w-[200px] p-4 ${idx !== envData.length - 1 ? 'border-r border-gray-200 dark:border-[#1e232d]' : ''}`}>
-              <div className="text-gray-500 dark:text-[#848d9c] text-[12px] mb-2">{item.label}</div>
-              <div className="flex items-center justify-between gap-2 bg-gray-50 dark:bg-[#0b0d12] border border-gray-200 dark:border-[#1e232d] rounded-md px-3 py-1.5 hover:border-blue-300 dark:hover:border-[#5c9dff]/30 transition-colors cursor-pointer group">
-                <span className={`text-[13px] truncate font-mono ${item.isLink ? 'text-blue-500 dark:text-[#848d9c]' : 'text-slate-800 dark:text-[#e2e8f0]'}`}>
-                  {item.value}
-                </span>
-                {!item.isLink && (
-                  <button className="text-gray-400 dark:text-[#848d9c] group-hover:text-slate-900 dark:group-hover:text-white transition-colors flex-shrink-0 flex items-center gap-1 text-[12px]">
-                    <FiCopy /> Copy
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* QUICK START BÖLÜMÜ */}
-      <div className="mb-16">
-        <h2 className="text-slate-900 dark:text-white text-[22px] font-bold mb-2">Quick Start</h2>
-        <p className="text-gray-500 dark:text-[#848d9c] text-[14px] mb-8">First integration in four steps — commands are filled with your environment.</p>
-
-        <div className="space-y-10">
-          {/* Adım 1 */}
-          <div className="relative pl-12">
-            <div className="absolute left-0 top-0 w-8 h-8 rounded-full bg-blue-50 dark:bg-[#5c9dff]/10 text-blue-600 dark:text-[#5c9dff] flex items-center justify-center font-bold text-[14px]">1</div>
-            <h3 className="text-slate-900 dark:text-white text-[16px] font-bold mb-2">Get token</h3>
-            <p className="text-gray-500 dark:text-[#848d9c] text-[14px] mb-4">Take the data.accessToken value from the login response and use it as $TOKEN.</p>
-            <div className="bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] rounded-xl overflow-hidden shadow-sm dark:shadow-none">
-              <div className="flex justify-between items-center px-4 py-3 border-b border-gray-200 dark:border-[#1e232d] bg-gray-50 dark:bg-[#0b0d12]">
-                <span className="text-gray-500 dark:text-[#848d9c] text-[13px]">Get token</span>
-                <span className="text-gray-500 dark:text-[#848d9c] text-[12px] font-mono border border-gray-200 dark:border-[#1e232d] px-2 py-0.5 rounded bg-white dark:bg-transparent">curl</span>
-              </div>
-              <div className="p-4 relative group">
-                <button className="absolute top-4 right-4 text-gray-500 dark:text-[#848d9c] group-hover:text-slate-900 dark:group-hover:text-white flex items-center gap-1 text-[12px] bg-gray-100 dark:bg-[#1e232d] px-2 py-1 rounded transition-colors">
-                  <FiCopy /> Copy
-                </button>
-                <pre className="text-slate-800 dark:text-[#e2e8f0] text-[13px] font-mono whitespace-pre-wrap leading-relaxed">
-<span className="text-purple-600 dark:text-[#c678dd]">curl</span> -X POST https://flovbit.codifya.com/api/auth/login \
-  -H <span className="text-green-600 dark:text-[#98c379]">"Content-Type: application/json"</span> \
-  -d <span className="text-green-600 dark:text-[#98c379]">'{`{
-    "email": "test@example.com",
-    "password": "password123"
-  }`}'</span>
-                </pre>
-              </div>
-            </div>
-          </div>
-
-          {/* Adım 2 */}
-          <div className="relative pl-12">
-            <div className="absolute left-0 top-0 w-8 h-8 rounded-full bg-blue-50 dark:bg-[#5c9dff]/10 text-blue-600 dark:text-[#5c9dff] flex items-center justify-center font-bold text-[14px]">2</div>
-            <h3 className="text-slate-900 dark:text-white text-[16px] font-bold mb-2">Make your first request</h3>
-            <p className="text-gray-500 dark:text-[#848d9c] text-[14px] mb-4">Fetch issues assigned to you with a Bearer token.</p>
-            <div className="bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] rounded-xl overflow-hidden shadow-sm dark:shadow-none">
-              <div className="flex justify-between items-center px-4 py-3 border-b border-gray-200 dark:border-[#1e232d] bg-gray-50 dark:bg-[#0b0d12]">
-                <span className="text-gray-500 dark:text-[#848d9c] text-[13px]">Make your first request</span>
-                <span className="text-gray-500 dark:text-[#848d9c] text-[12px] font-mono border border-gray-200 dark:border-[#1e232d] px-2 py-0.5 rounded bg-white dark:bg-transparent">curl</span>
-              </div>
-              <div className="p-4 relative group">
-                <button className="absolute top-4 right-4 text-gray-500 dark:text-[#848d9c] group-hover:text-slate-900 dark:group-hover:text-white flex items-center gap-1 text-[12px] bg-gray-100 dark:bg-[#1e232d] px-2 py-1 rounded transition-colors">
-                  <FiCopy /> Copy
-                </button>
-                <pre className="text-slate-800 dark:text-[#e2e8f0] text-[13px] font-mono whitespace-pre-wrap leading-relaxed">
-<span className="text-purple-600 dark:text-[#c678dd]">curl</span> "https://flovbit.codifya.com/api/users/me/issues" \
-  -H <span className="text-green-600 dark:text-[#98c379]">"Authorization: Bearer $TOKEN"</span>
-                </pre>
-              </div>
-            </div>
-          </div>
-
-          {/* Adım 3 */}
-          <div className="relative pl-12">
-            <div className="absolute left-0 top-0 w-8 h-8 rounded-full bg-blue-50 dark:bg-[#5c9dff]/10 text-blue-600 dark:text-[#5c9dff] flex items-center justify-center font-bold text-[14px]">3</div>
-            <h3 className="text-slate-900 dark:text-white text-[16px] font-bold mb-2">Create an issue</h3>
-            <p className="text-gray-500 dark:text-[#848d9c] text-[14px] mb-4">Get boardId from GET /api/projects/{"{id}"}/boards and columnId from GET /api/boards/{"{id}"}.</p>
-            <div className="bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] rounded-xl overflow-hidden shadow-sm dark:shadow-none">
-              <div className="flex justify-between items-center px-4 py-3 border-b border-gray-200 dark:border-[#1e232d] bg-gray-50 dark:bg-[#0b0d12]">
-                <span className="text-gray-500 dark:text-[#848d9c] text-[13px]">Create an issue</span>
-                <span className="text-gray-500 dark:text-[#848d9c] text-[12px] font-mono border border-gray-200 dark:border-[#1e232d] px-2 py-0.5 rounded bg-white dark:bg-transparent">curl</span>
-              </div>
-              <div className="p-4 relative group">
-                <button className="absolute top-4 right-4 text-gray-500 dark:text-[#848d9c] group-hover:text-slate-900 dark:group-hover:text-white flex items-center gap-1 text-[12px] bg-gray-100 dark:bg-[#1e232d] px-2 py-1 rounded transition-colors">
-                  <FiCopy /> Copy
-                </button>
-                <pre className="text-slate-800 dark:text-[#e2e8f0] text-[13px] font-mono whitespace-pre-wrap leading-relaxed">
-<span className="text-purple-600 dark:text-[#c678dd]">curl</span> -X POST https://flovbit.codifya.com/api/boards/{"{boardId}"}/issues \
-  -H <span className="text-green-600 dark:text-[#98c379]">"Authorization: Bearer $TOKEN"</span> \
-  -H <span className="text-green-600 dark:text-[#98c379]">"Content-Type: application/json"</span> \
-  -d <span className="text-green-600 dark:text-[#98c379]">'{`{
-    "title": "My first issue",
-    "columnId": "{columnId}",
-    "priority": "MEDIUM"
-  }`}'</span>
-                </pre>
-              </div>
-            </div>
-          </div>
-
-          {/* Adım 4 */}
-          <div className="relative pl-12">
-            <div className="absolute left-0 top-0 w-8 h-8 rounded-full bg-blue-50 dark:bg-[#5c9dff]/10 text-blue-600 dark:text-[#5c9dff] flex items-center justify-center font-bold text-[14px]">4</div>
-            <h3 className="text-slate-900 dark:text-white text-[16px] font-bold mb-2">Connect MCP</h3>
-            <p className="text-gray-500 dark:text-[#848d9c] text-[14px] mb-4">Add this block to your Claude Desktop / Cursor MCP settings.</p>
-            <div className="bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] rounded-xl overflow-hidden shadow-sm dark:shadow-none">
-              <div className="flex justify-between items-center px-4 py-3 border-b border-gray-200 dark:border-[#1e232d] bg-gray-50 dark:bg-[#0b0d12]">
-                <span className="text-gray-500 dark:text-[#848d9c] text-[13px]">Connect MCP</span>
-                <span className="text-gray-500 dark:text-[#848d9c] text-[12px] font-mono border border-gray-200 dark:border-[#1e232d] px-2 py-0.5 rounded bg-white dark:bg-transparent">config</span>
-              </div>
-              <div className="p-4 relative group">
-                <button className="absolute top-4 right-4 text-gray-500 dark:text-[#848d9c] group-hover:text-slate-900 dark:group-hover:text-white flex items-center gap-1 text-[12px] bg-gray-100 dark:bg-[#1e232d] px-2 py-1 rounded transition-colors">
-                  <FiCopy /> Copy
-                </button>
-                <pre className="text-slate-800 dark:text-[#e2e8f0] text-[13px] font-mono whitespace-pre-wrap leading-relaxed">
-{`{
-  "mcpServers": {
-    "flovbit": {
-      "command": "npx",
-      "args": [
-        "tsx",
-        "src/mcp/server.ts"
-      ],
-      "env": {
-        "MCP_STUDIO_TOKEN": "<API_KEY veya JWT>"
-      }
-    }
-  }
-}`}
-                </pre>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* FULL REFERENCE BÖLÜMÜ & TABS */}
-      <div>
-        <h2 className="text-slate-900 dark:text-white text-[22px] font-bold mb-6">Full Reference</h2>
+        <h2 className="text-[18px] font-bold text-slate-900 dark:text-white mb-4">Your Environment</h2>
+        <p className="text-[13px] text-gray-500 dark:text-[#848d9c] mb-4">auto-filled · used in commands</p>
         
-        {/* Tab Menü */}
-        <div className="flex gap-6 border-b border-gray-200 dark:border-[#1e232d] mb-8">
-          <button 
-            onClick={() => setActiveTab("rest")}
-            className={`pb-3 text-[14px] font-medium border-b-2 transition-colors ${activeTab === "rest" ? "border-blue-600 dark:border-[#5c9dff] text-blue-600 dark:text-white" : "border-transparent text-gray-500 dark:text-[#848d9c] hover:text-slate-900 dark:hover:text-white"}`}
-          >
-            REST API
-          </button>
-          <button 
-            onClick={() => setActiveTab("mcp-tools")}
-            className={`pb-3 text-[14px] font-medium border-b-2 transition-colors ${activeTab === "mcp-tools" ? "border-blue-600 dark:border-[#5c9dff] text-blue-600 dark:text-white" : "border-transparent text-gray-500 dark:text-[#848d9c] hover:text-slate-900 dark:hover:text-white"}`}
-          >
-            MCP Tools
-          </button>
-          <button 
-            onClick={() => setActiveTab("mcp-setup")}
-            className={`pb-3 text-[14px] font-medium border-b-2 transition-colors ${activeTab === "mcp-setup" ? "border-blue-600 dark:border-[#5c9dff] text-blue-600 dark:text-white" : "border-transparent text-gray-500 dark:text-[#848d9c] hover:text-slate-900 dark:hover:text-white"}`}
-          >
-            MCP Setup
-          </button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] rounded-xl p-4 shadow-sm flex items-center justify-between">
+            <div>
+              <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Base URL</div>
+              <div className="text-[14px] font-mono text-slate-900 dark:text-[#e2e8f0]">{envData.baseUrl}</div>
+            </div>
+            <CopyButton text={envData.baseUrl} id="env-base" />
+          </div>
+          <div className="bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] rounded-xl p-4 shadow-sm flex items-center justify-between">
+            <div>
+              <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">User / Email</div>
+              <div className="text-[14px] font-mono text-slate-900 dark:text-[#e2e8f0]">{envData.userId}</div>
+            </div>
+            <CopyButton text={envData.userId} id="env-user" />
+          </div>
+          <div className="bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] rounded-xl p-4 shadow-sm flex items-center justify-between">
+            <div>
+              <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Workspace ID</div>
+              <div className="text-[14px] font-mono text-slate-900 dark:text-[#e2e8f0]">{envData.workspaceId}</div>
+            </div>
+            <CopyButton text={envData.workspaceId} id="env-ws" />
+          </div>
+          <div className="bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] rounded-xl p-4 shadow-sm flex items-center justify-between">
+            <div>
+              <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Project ID</div>
+              <div className="text-[14px] font-mono text-slate-900 dark:text-[#e2e8f0]">{envData.projectId}</div>
+            </div>
+            <CopyButton text={envData.projectId} id="env-proj" />
+          </div>
         </div>
+      </div>
 
-        {/* --- TAB 1: REST API --- */}
-        {activeTab === "rest" && (
-          <div className="space-y-12">
-            {restEndpoints.map((category, idx) => (
-              <div key={idx}>
-                <h3 className="text-slate-900 dark:text-white text-[18px] font-bold mb-4">{category.category}</h3>
-                <div className="flex flex-col gap-2">
-                  {category.items.map((endpoint, eIdx) => (
-                    <div key={eIdx} className="bg-white dark:bg-[#0b0d12] border border-gray-200 dark:border-[#1e232d] hover:border-blue-200 dark:hover:border-[#2a3140] transition-colors rounded-lg p-3 flex items-center justify-between group cursor-pointer shadow-sm dark:shadow-none">
-                      <div className="flex items-center gap-4">
-                        <span className={`text-[11px] font-bold px-2 py-1 rounded w-[60px] text-center ${getMethodColor(endpoint.method)}`}>
-                          {endpoint.method}
-                        </span>
-                        <code className="text-slate-800 dark:text-[#e2e8f0] font-mono text-[13px]">{endpoint.path}</code>
-                        <span className="text-gray-500 dark:text-[#848d9c] text-[13px] ml-4 hidden md:block">{endpoint.desc}</span>
-                      </div>
-                      <span className="text-gray-400 dark:text-[#848d9c] text-[11px] font-mono border border-gray-200 dark:border-[#1e232d] px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">curl</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-            
-            {/* TypeScript Client Example Block */}
-            <div className="mt-12">
-              <h3 className="text-slate-900 dark:text-white text-[18px] font-bold mb-4">TypeScript client example</h3>
-              <p className="text-gray-500 dark:text-[#848d9c] text-[14px] mb-4">In-browser calls use the session cookie; external clients add a Bearer token.</p>
-              <div className="bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] rounded-xl overflow-hidden shadow-sm dark:shadow-none">
-                <div className="flex justify-between items-center px-4 py-3 border-b border-gray-200 dark:border-[#1e232d] bg-gray-50 dark:bg-[#0b0d12]">
-                  <span className="text-gray-500 dark:text-[#848d9c] text-[13px]">api-client.ts</span>
-                  <button className="text-gray-500 dark:text-[#848d9c] hover:text-slate-900 dark:hover:text-white flex items-center gap-1 text-[12px] bg-gray-100 dark:bg-[#1e232d] px-2 py-1 rounded transition-colors">
-                    <FiCopy /> Copy
-                  </button>
-                </div>
-                <div className="p-4">
-                  <pre className="text-slate-800 dark:text-[#e2e8f0] text-[13px] font-mono whitespace-pre-wrap leading-relaxed">
-{`// From the browser: session cookie is sent automatically, no token needed.
-// External (Node/CLI): add Authorization: Bearer <accessToken>
-const api = {
-  get: async <T>(path: string) => {
-    const res = await fetch(path, { credentials: 'include' });
-    if (!res.ok) throw new Error(\`HTTP \${res.status}\`);
-    return res.json() as Promise<T>;
-  },
-  post: async <T>(path: string, body: unknown) => {
-    const res = await fetch(path, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      credentials: 'include',
-    });
-    if (!res.ok) throw new Error(\`HTTP \${res.status}\`);
-    return res.json() as Promise<T>;
-  }
-};`}
+      {/* QUICK START */}
+      <div className="mb-12">
+        <h2 className="text-[18px] font-bold text-slate-900 dark:text-white mb-4">Quick Start</h2>
+        <p className="text-[13px] text-gray-500 dark:text-[#848d9c] mb-6">First integration in four steps — commands are filled with your environment.</p>
+        
+        <div className="flex flex-col gap-6">
+          {/* STEP 1 */}
+          <div className="bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] rounded-2xl p-6 shadow-sm">
+            <div className="flex items-start gap-4">
+              <div className="w-8 h-8 shrink-0 rounded-full bg-blue-50 dark:bg-[#1c2436] text-blue-600 dark:text-[#5c9dff] flex items-center justify-center font-bold text-[14px]">1</div>
+              <div className="w-full">
+                <h3 className="text-[15px] font-bold text-slate-900 dark:text-white mb-1">Get token</h3>
+                <p className="text-[13px] text-gray-500 dark:text-[#848d9c] mb-4">Take the token value from the login response and use it as $TOKEN.</p>
+                <div className="bg-slate-900 dark:bg-[#0b0d12] rounded-xl overflow-hidden">
+                  <div className="flex justify-between items-center px-4 py-2 bg-slate-800 dark:bg-[#1e232d] text-gray-400 text-[11px] font-mono">
+                    <span>curl</span>
+                    <CopyButton text={`curl -X POST ${envData.baseUrl}/api/auth/login -H "Content-Type: application/json" -d '{"email": "${envData.userId}", "password": "password123"}'`} id="qs-1" />
+                  </div>
+                  <pre className="p-4 text-[13px] font-mono text-gray-300 overflow-x-auto">
+                    <span className="text-pink-400">curl</span> -X POST {envData.baseUrl}/api/v1/auth/login \<br/>
+                    &nbsp;&nbsp;-H <span className="text-yellow-300">"Content-Type: application/json"</span> \<br/>
+                    &nbsp;&nbsp;-d <span className="text-yellow-300">'{'{'}<br/>
+                    &nbsp;&nbsp;&nbsp;&nbsp;"email": "{envData.userId}",<br/>
+                    &nbsp;&nbsp;&nbsp;&nbsp;"password": "password123"<br/>
+                    &nbsp;&nbsp;{'}'}'</span>
                   </pre>
                 </div>
               </div>
             </div>
           </div>
-        )}
 
-        {/* --- TAB 2: MCP TOOLS --- */}
-        {activeTab === "mcp-tools" && (
-          <div>
-            <p className="text-gray-500 dark:text-[#848d9c] text-[14px] mb-6">All tools expect userId as their first parameter for identity. You can call them in natural language from an AI client.</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-12">
-              {mcpTools.map((tool, idx) => (
-                <div key={idx} className="bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] rounded-xl p-5 shadow-sm dark:shadow-none">
-                  <h4 className="text-blue-600 dark:text-[#5c9dff] text-[15px] font-mono font-bold mb-2">{tool.name}</h4>
-                  <p className="text-slate-800 dark:text-[#e2e8f0] text-[13px] mb-4">{tool.desc}</p>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {tool.params.map((param, pIdx) => (
-                      <span key={pIdx} className="bg-gray-100 dark:bg-[#1e232d] text-gray-500 dark:text-[#848d9c] text-[11px] font-mono px-2 py-0.5 rounded">
-                        {param}
-                      </span>
-                    ))}
+          {/* STEP 2 */}
+          <div className="bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] rounded-2xl p-6 shadow-sm">
+            <div className="flex items-start gap-4">
+              <div className="w-8 h-8 shrink-0 rounded-full bg-blue-50 dark:bg-[#1c2436] text-blue-600 dark:text-[#5c9dff] flex items-center justify-center font-bold text-[14px]">2</div>
+              <div className="w-full">
+                <h3 className="text-[15px] font-bold text-slate-900 dark:text-white mb-1">Make your first request</h3>
+                <p className="text-[13px] text-gray-500 dark:text-[#848d9c] mb-4">Fetch issues assigned to you with a Bearer token.</p>
+                <div className="bg-slate-900 dark:bg-[#0b0d12] rounded-xl overflow-hidden">
+                  <div className="flex justify-between items-center px-4 py-2 bg-slate-800 dark:bg-[#1e232d] text-gray-400 text-[11px] font-mono">
+                    <span>curl</span>
+                    <CopyButton text={`curl "${envData.baseUrl}/api/v1/issues/assignee/${envData.userId}" -H "Authorization: Bearer $TOKEN"`} id="qs-2" />
                   </div>
-                  <div className="bg-gray-50 dark:bg-[#0b0d12] border border-gray-200 dark:border-[#1e232d] rounded p-2 text-gray-500 dark:text-[#848d9c] text-[12px]">
-                    {tool.example}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <h3 className="text-slate-900 dark:text-white text-[18px] font-bold mb-4 border-t border-gray-200 dark:border-[#1e232d] pt-8">MCP Prompts</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {mcpPrompts.map((prompt, idx) => (
-                <div key={idx} className="bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] rounded-xl p-5 shadow-sm dark:shadow-none">
-                  <h4 className="text-purple-600 dark:text-[#c678dd] text-[15px] font-mono font-bold mb-2">{prompt.name}</h4>
-                  <p className="text-slate-800 dark:text-[#e2e8f0] text-[13px] mb-4">{prompt.desc}</p>
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-500 dark:text-[#848d9c] text-[12px]">args:</span>
-                    <span className="text-gray-500 dark:text-[#848d9c] text-[11px] font-mono">{prompt.params.join(", ")}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        
-        {/* --- TAB 3: MCP SETUP --- */}
-        {activeTab === "mcp-setup" && (
-          <div className="space-y-12">
-            
-            {/* API Keys Section */}
-            <div>
-              <h3 className="text-slate-900 dark:text-white text-[18px] font-bold mb-2">API Keys</h3>
-              <p className="text-gray-500 dark:text-[#848d9c] text-[14px] mb-4">Create Bearer tokens for MCP HTTP and REST API requests.</p>
-              <div className="flex items-center gap-3 bg-white dark:bg-[#11141b] p-4 rounded-xl border border-gray-200 dark:border-[#1e232d] shadow-sm dark:shadow-none">
-                <input 
-                  type="text" 
-                  placeholder="Key name (e.g. Cursor, personal laptop)" 
-                  className="flex-1 bg-gray-50 dark:bg-[#0b0d12] border border-gray-200 dark:border-[#1e232d] rounded-md px-3 py-2 text-[14px] text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-blue-500 dark:focus:border-[#5c9dff] transition-colors"
-                />
-                <div className="relative">
-                  <button 
-                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    className="flex items-center gap-2 bg-gray-50 dark:bg-[#0b0d12] border border-gray-200 dark:border-[#1e232d] px-3 py-2 rounded-md text-[14px] text-slate-900 dark:text-white w-[110px] justify-between transition-colors"
-                  >
-                    {keyExpiration} <FiChevronDown />
-                  </button>
-                  {isDropdownOpen && (
-                    <div className="absolute top-full right-0 mt-1 w-full bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] rounded-md overflow-hidden z-10 shadow-lg">
-                      {["30 days", "90 days", "1 year", "Never"].map(opt => (
-                        <div key={opt} onClick={() => {setKeyExpiration(opt); setIsDropdownOpen(false);}} className="px-3 py-2 text-[13px] text-slate-800 dark:text-white hover:bg-gray-50 dark:hover:bg-[#1e232d] cursor-pointer">
-                          {opt}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <button className="bg-blue-600 dark:bg-[#5c9dff] text-white dark:text-[#0b0d12] px-4 py-2 rounded-md font-semibold text-[14px] hover:bg-blue-700 dark:hover:bg-[#4a8bee] transition-colors">
-                  Create
-                </button>
-              </div>
-              <p className="text-gray-500 dark:text-[#848d9c] text-[13px] mt-4 ml-1">No API keys yet.</p>
-            </div>
-
-            {/* Connect Remotely */}
-            <div>
-              <h3 className="text-slate-900 dark:text-white text-[18px] font-bold mb-2 flex items-center gap-2">
-                Connect remotely <span className="bg-gray-100 dark:bg-[#1e232d] text-gray-500 dark:text-[#848d9c] text-[11px] px-2 py-0.5 rounded font-normal">(recommended)</span>
-              </h3>
-              <p className="text-gray-500 dark:text-[#848d9c] text-[14px] mb-4">
-                MCP endpoint: <code className="text-slate-800 dark:text-[#e2e8f0]">https://mcp.flovbit.codifya.com/mcp</code><br/>
-                Send the API key you create below in the <code className="text-slate-800 dark:text-[#e2e8f0]">Authorization: Bearer &lt;API_KEY&gt;</code> header.
-              </p>
-
-              <div className="space-y-4">
-                <div className="bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] rounded-xl overflow-hidden shadow-sm dark:shadow-none">
-                  <div className="flex justify-between items-center px-4 py-3 border-b border-gray-200 dark:border-[#1e232d] bg-gray-50 dark:bg-[#0b0d12]">
-                    <span className="text-gray-500 dark:text-[#848d9c] text-[13px]">Claude Code</span>
-                    <button className="text-gray-500 dark:text-[#848d9c] hover:text-slate-900 dark:hover:text-white flex items-center gap-1 text-[12px] bg-gray-100 dark:bg-[#1e232d] px-2 py-1 rounded transition-colors"><FiCopy /> Copy</button>
-                  </div>
-                  <div className="p-4">
-                    <pre className="text-slate-800 dark:text-[#e2e8f0] text-[13px] font-mono whitespace-pre-wrap">
-claude mcp add --transport http flovbit https://mcp.flovbit.codifya.com/mcp \
-  --header "Authorization: Bearer &lt;API_KEY&gt;"
-                    </pre>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* MCP Resources */}
-            <div>
-              <h3 className="text-slate-900 dark:text-white text-[18px] font-bold mb-4">MCP Resources</h3>
-              <div className="space-y-2">
-                <div className="bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] rounded-lg p-3 flex items-center gap-4 shadow-sm dark:shadow-none">
-                  <code className="text-blue-600 dark:text-[#5c9dff] text-[13px] font-mono w-[200px]">board/{"{boardId}"}</code>
-                  <span className="text-gray-500 dark:text-[#848d9c] text-[13px]">Board snapshot with columns and status mappings</span>
-                </div>
-                <div className="bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] rounded-lg p-3 flex items-center gap-4 shadow-sm dark:shadow-none">
-                  <code className="text-blue-600 dark:text-[#5c9dff] text-[13px] font-mono w-[200px]">project/{"{projectId}"}/summary</code>
-                  <span className="text-gray-500 dark:text-[#848d9c] text-[13px]">Project summary with issue counts and workload</span>
-                </div>
-                <div className="bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] rounded-lg p-3 flex items-center gap-4 shadow-sm dark:shadow-none">
-                  <code className="text-blue-600 dark:text-[#5c9dff] text-[13px] font-mono w-[200px]">cycle/{"{cycleId}"}/summary</code>
-                  <span className="text-gray-500 dark:text-[#848d9c] text-[13px]">Cycle summary with issue count and days remaining</span>
+                  <pre className="p-4 text-[13px] font-mono text-gray-300 overflow-x-auto">
+                    <span className="text-pink-400">curl</span> <span className="text-yellow-300">"{envData.baseUrl}/api/v1/issues/assignee/{envData.userId}"</span> \<br/>
+                    &nbsp;&nbsp;-H <span className="text-yellow-300">"Authorization: Bearer $TOKEN"</span>
+                  </pre>
                 </div>
               </div>
             </div>
           </div>
-        )}
+
+          {/* STEP 3 */}
+          <div className="bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] rounded-2xl p-6 shadow-sm">
+            <div className="flex items-start gap-4">
+              <div className="w-8 h-8 shrink-0 rounded-full bg-blue-50 dark:bg-[#1c2436] text-blue-600 dark:text-[#5c9dff] flex items-center justify-center font-bold text-[14px]">3</div>
+              <div className="w-full">
+                <h3 className="text-[15px] font-bold text-slate-900 dark:text-white mb-1">Connect MCP</h3>
+                <p className="text-[13px] text-gray-500 dark:text-[#848d9c] mb-4">Add this block to your Claude Desktop / Cursor MCP settings.</p>
+                <div className="bg-slate-900 dark:bg-[#0b0d12] rounded-xl overflow-hidden">
+                  <div className="flex justify-between items-center px-4 py-2 bg-slate-800 dark:bg-[#1e232d] text-gray-400 text-[11px] font-mono">
+                    <span>config.json</span>
+                    <CopyButton text={`{\n  "mcpServers": {\n    "flowbit": {\n      "command": "npx",\n      "args": ["tsx", "src/mcp/server.ts"],\n      "env": { "MCP_STDIO_TOKEN": "<API_KEY>" }\n    }\n  }\n}`} id="qs-3" />
+                  </div>
+                  <pre className="p-4 text-[13px] font-mono text-gray-300 overflow-x-auto">
+                    {'{'}<br/>
+                    &nbsp;&nbsp;<span className="text-blue-300">"mcpServers"</span>: {'{'}<br/>
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-blue-300">"flowbit"</span>: {'{'}<br/>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-blue-300">"command"</span>: <span className="text-yellow-300">"npx"</span>,<br/>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-blue-300">"args"</span>: [<span className="text-yellow-300">"tsx"</span>, <span className="text-yellow-300">"src/mcp/server.ts"</span>],<br/>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-blue-300">"env"</span>: {'{'}<br/>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-blue-300">"MCP_STDIO_TOKEN"</span>: <span className="text-yellow-300">"&lt;YOUR_TOKEN&gt;"</span><br/>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{'}'}<br/>
+                    &nbsp;&nbsp;&nbsp;&nbsp;{'}'}<br/>
+                    &nbsp;&nbsp;{'}'}<br/>
+                    {'}'}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* FULL REFERENCE */}
+      <div className="mb-12">
+        <h2 className="text-[18px] font-bold text-slate-900 dark:text-white mb-6">Full Reference</h2>
+        
+        <div className="flex flex-col gap-8">
+          {/* Section: Workspaces */}
+          <div>
+            <h3 className="text-[13px] font-bold text-gray-400 dark:text-[#848d9c] uppercase tracking-wider mb-3">Workspaces</h3>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-4 py-2 border-b border-gray-100 dark:border-[#1e232d]">
+                <span className="w-14 text-[11px] font-bold text-blue-600 dark:text-[#5c9dff]">GET</span>
+                <span className="font-mono text-[13px] text-slate-700 dark:text-[#e2e8f0]">/api/v1/workspaces/user/{`{email}`}</span>
+                <span className="text-[13px] text-gray-500 ml-auto">List user workspaces</span>
+              </div>
+              <div className="flex items-center gap-4 py-2 border-b border-gray-100 dark:border-[#1e232d]">
+                <span className="w-14 text-[11px] font-bold text-green-600 dark:text-[#22c55e]">POST</span>
+                <span className="font-mono text-[13px] text-slate-700 dark:text-[#e2e8f0]">/api/v1/workspaces/create</span>
+                <span className="text-[13px] text-gray-500 ml-auto">Create workspace</span>
+              </div>
+              <div className="flex items-center gap-4 py-2 border-b border-gray-100 dark:border-[#1e232d]">
+                <span className="w-14 text-[11px] font-bold text-green-600 dark:text-[#22c55e]">POST</span>
+                <span className="font-mono text-[13px] text-slate-700 dark:text-[#e2e8f0]">/api/v1/workspaces/members/{`{id}`}/add</span>
+                <span className="text-[13px] text-gray-500 ml-auto">Invite member</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Section: Issues */}
+          <div>
+            <h3 className="text-[13px] font-bold text-gray-400 dark:text-[#848d9c] uppercase tracking-wider mb-3">Issues</h3>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-4 py-2 border-b border-gray-100 dark:border-[#1e232d]">
+                <span className="w-14 text-[11px] font-bold text-blue-600 dark:text-[#5c9dff]">GET</span>
+                <span className="font-mono text-[13px] text-slate-700 dark:text-[#e2e8f0]">/api/v1/issues/project/{`{id}`}</span>
+                <span className="text-[13px] text-gray-500 ml-auto">List project issues</span>
+              </div>
+              <div className="flex items-center gap-4 py-2 border-b border-gray-100 dark:border-[#1e232d]">
+                <span className="w-14 text-[11px] font-bold text-green-600 dark:text-[#22c55e]">POST</span>
+                <span className="font-mono text-[13px] text-slate-700 dark:text-[#e2e8f0]">/api/v1/issues/create</span>
+                <span className="text-[13px] text-gray-500 ml-auto">Create issue</span>
+              </div>
+              <div className="flex items-center gap-4 py-2 border-b border-gray-100 dark:border-[#1e232d]">
+                <span className="w-14 text-[11px] font-bold text-amber-500 dark:text-[#f59e0b]">PUT</span>
+                <span className="font-mono text-[13px] text-slate-700 dark:text-[#e2e8f0]">/api/v1/issues/{`{id}`}</span>
+                <span className="text-[13px] text-gray-500 ml-auto">Update issue details</span>
+              </div>
+              <div className="flex items-center gap-4 py-2 border-b border-gray-100 dark:border-[#1e232d]">
+                <span className="w-14 text-[11px] font-bold text-red-500 dark:text-[#ef4444]">DEL</span>
+                <span className="font-mono text-[13px] text-slate-700 dark:text-[#e2e8f0]">/api/v1/issues/{`{id}`}</span>
+                <span className="text-[13px] text-gray-500 ml-auto">Delete issue</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 }
