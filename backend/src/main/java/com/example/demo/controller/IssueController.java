@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.entity.Issue;
@@ -90,5 +92,44 @@ public class IssueController {
     @GetMapping("/assignee/{email}")
     public ResponseEntity<List<Issue>> getIssuesByAssignee(@PathVariable String email) {
         return ResponseEntity.ok(issueRepository.findByAssigneeEmail(email));
+    }
+
+    // GÖREV ARAMA (title/description içinde geçen metin, opsiyonel projectId/assigneeEmail/priority filtreleri)
+    // NOT: projectId verilmezse tüm sistemdeki issue'larda arar — yetki filtresi yok, dikkatli kullan.
+    @GetMapping("/search")
+    public ResponseEntity<List<Issue>> searchIssues(
+            @RequestParam String query,
+            @RequestParam(required = false) Long projectId,
+            @RequestParam(required = false) String assigneeEmail,
+            @RequestParam(required = false) String priority) {
+
+        List<Issue> pool = projectId != null ? issueRepository.findByProjectId(projectId) : issueRepository.findAll();
+        String q = query.toLowerCase();
+
+        List<Issue> result = pool.stream()
+                .filter(i -> (i.getTitle() != null && i.getTitle().toLowerCase().contains(q))
+                        || (i.getDescription() != null && i.getDescription().toLowerCase().contains(q)))
+                .filter(i -> assigneeEmail == null || assigneeEmail.equals(i.getAssigneeEmail()))
+                .filter(i -> priority == null || priority.equalsIgnoreCase(i.getPriority()))
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(result);
+    }
+
+    // İSSUE'YU BİR CYCLE'A ATAMA (veya cycleId: null göndererek çıkarma)
+    @PutMapping("/{id}/cycle")
+    public ResponseEntity<?> assignIssueToCycle(@PathVariable Long id, @RequestBody java.util.Map<String, Object> body) {
+        Long cycleId = body.get("cycleId") == null ? null : ((Number) body.get("cycleId")).longValue();
+        return issueRepository.findById(id).map(issue -> {
+            issue.setCycleId(cycleId);
+            Issue updated = issueRepository.save(issue);
+            return ResponseEntity.ok(updated);
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    // Bir cycle'a atanmış tüm issue'ları listeleme
+    @GetMapping("/cycle/{cycleId}")
+    public ResponseEntity<List<Issue>> getIssuesByCycle(@PathVariable Long cycleId) {
+        return ResponseEntity.ok(issueRepository.findByCycleId(cycleId));
     }
 }

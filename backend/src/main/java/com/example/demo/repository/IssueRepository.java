@@ -10,4 +10,5 @@ public interface IssueRepository extends JpaRepository<Issue, Long> {
     List<Issue> findByProjectId(Long projectId);
     List<Issue> findByAssigneeEmail(String email);
     List<Issue> findByProjectIdIn(List<Long> projectIds);
+    List<Issue> findByCycleId(Long cycleId);
 }

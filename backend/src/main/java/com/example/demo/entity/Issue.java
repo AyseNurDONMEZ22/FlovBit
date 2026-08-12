@@ -28,6 +28,8 @@ public class Issue {
     // İleride "Bana Atananlar" (My Issues) kısmı için kullanacağız
     private String assigneeEmail; 
 
+    private Long cycleId; // hangi cycle'a (sprint'e) atandığı — null = hiçbir cycle'a atanmamış
+
     private LocalDateTime createdAt = LocalDateTime.now();
 
     // GETTER VE SETTER METODLARI
@@ -51,6 +53,9 @@ public class Issue {
 
     public String getAssigneeEmail() { return assigneeEmail; }
     public void setAssigneeEmail(String assigneeEmail) { this.assigneeEmail = assigneeEmail; }
+
+    public Long getCycleId() { return cycleId; }
+    public void setCycleId(Long cycleId) { this.cycleId = cycleId; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
