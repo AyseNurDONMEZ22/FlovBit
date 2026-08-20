@@ -493,13 +493,17 @@ if (transport === "http") {
     const app = express();
     app.use(express.json());
 
-    // Oturumları hafızada tutacağız (Çoklu kullanıcı ve güvenli mesajlaşma için)
     const transports = new Map<string, any>();
-    const servers = new Map<string, Server>();
+    const servers = new Map<string, any>(); 
 
     app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
-    // 1. ADIM: Cursor buraya GET isteği atarak SSE (Canlı) bağlantıyı başlatır
+    // 1. Cursor'ın ilk denediği deneysel POST metodunu temizce reddediyoruz (Log kirliliğini önler)
+    app.post("/mcp", (_req, res) => {
+      res.status(404).send("Lütfen SSE için GET /mcp kullanın.");
+    });
+
+    // 2. Cursor fallback yapıp GET ile asıl SSE bağlantısını kurar
     app.get("/mcp", async (req, res) => {
       const authHeader = req.headers["authorization"];
       if (!authHeader || typeof authHeader !== "string" || !authHeader.startsWith("Bearer ")) {
@@ -508,17 +512,19 @@ if (transport === "http") {
       }
       const token = authHeader.substring(7);
 
-      // Her bağlantı için benzersiz bir oturum ID'si oluşturuyoruz
-      const sessionId = Math.random().toString(36).substring(7);
-
-      // Kullanıcıya özel sunucuyu ve SSE taşıyıcısını oluşturuyoruz
+      // Benzersiz oturum ID'si
+      const sessionId = Math.random().toString(36).substring(2, 15);
+      
       const server = createServer(token);
-      const sseTransport = new SSEServerTransport(`/messages?sessionId=${sessionId}`, res);
+      
+      // Query param yerine temiz URL kullanıyoruz (Proxy'lerde silinme riskine karşı)
+      const sseTransport = new SSEServerTransport(`/messages/${sessionId}`, res);
 
       transports.set(sessionId, sseTransport);
       servers.set(sessionId, server);
 
-      res.on("close", () => {
+      // HATA BURADAYDI: res.on("close") çok erken tetikleniyordu. req.on("close") kullanıyoruz.
+      req.on("close", () => {
         sseTransport.close();
         server.close();
         transports.delete(sessionId);
@@ -528,9 +534,9 @@ if (transport === "http") {
       await server.connect(sseTransport);
     });
 
-    // 2. ADIM: Cursor çalıştıracağı komutları buraya POST eder
-    app.post("/messages", async (req, res) => {
-      const sessionId = req.query.sessionId as string;
+    // 3. Cursor komutları buraya POST eder
+    app.post("/messages/:sessionId", async (req, res) => {
+      const sessionId = req.params.sessionId;
       const sseTransport = transports.get(sessionId);
 
       if (!sseTransport) {
