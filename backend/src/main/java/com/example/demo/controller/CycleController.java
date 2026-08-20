@@ -84,4 +84,11 @@ public class CycleController {
 
         return ResponseEntity.ok(result);
     }
+
+     @GetMapping("/{id}")
+    public ResponseEntity<Cycle> getCycleById(@PathVariable Long id) {
+        return cycleRepository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
 }
