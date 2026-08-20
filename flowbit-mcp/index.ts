@@ -486,30 +486,59 @@ async function main() {
     return;
   }
 
-  if (transport === "http") {
+if (transport === "http") {
     const { default: express } = await import("express");
+    const { SSEServerTransport } = await import("@modelcontextprotocol/sdk/server/sse.js");
+
     const app = express();
     app.use(express.json());
 
+    // Oturumları hafızada tutacağız (Çoklu kullanıcı ve güvenli mesajlaşma için)
+    const transports = new Map<string, any>();
+    const servers = new Map<string, Server>();
+
     app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
-    // Her istek KENDİ Authorization header'ını taşır — tek bir global token yok.
-    app.post("/mcp", async (req, res) => {
+    // 1. ADIM: Cursor buraya GET isteği atarak SSE (Canlı) bağlantıyı başlatır
+    app.get("/mcp", async (req, res) => {
       const authHeader = req.headers["authorization"];
-      if (!authHeader || Array.isArray(authHeader) || !authHeader.startsWith("Bearer ")) {
+      if (!authHeader || typeof authHeader !== "string" || !authHeader.startsWith("Bearer ")) {
         res.status(401).json({ error: "Authorization: Bearer <API_KEY> header'ı gerekli" });
         return;
       }
       const token = authHeader.substring(7);
 
+      // Her bağlantı için benzersiz bir oturum ID'si oluşturuyoruz
+      const sessionId = Math.random().toString(36).substring(7);
+
+      // Kullanıcıya özel sunucuyu ve SSE taşıyıcısını oluşturuyoruz
       const server = createServer(token);
-      const httpTransport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+      const sseTransport = new SSEServerTransport(`/messages?sessionId=${sessionId}`, res);
+
+      transports.set(sessionId, sseTransport);
+      servers.set(sessionId, server);
+
       res.on("close", () => {
-        httpTransport.close();
+        sseTransport.close();
         server.close();
+        transports.delete(sessionId);
+        servers.delete(sessionId);
       });
-      await server.connect(httpTransport);
-      await httpTransport.handleRequest(req, res, req.body);
+
+      await server.connect(sseTransport);
+    });
+
+    // 2. ADIM: Cursor çalıştıracağı komutları buraya POST eder
+    app.post("/messages", async (req, res) => {
+      const sessionId = req.query.sessionId as string;
+      const sseTransport = transports.get(sessionId);
+
+      if (!sseTransport) {
+        res.status(404).send("Geçersiz veya kapanmış oturum");
+        return;
+      }
+
+      await sseTransport.handlePostMessage(req, res);
     });
 
     const port = Number(process.env.PORT) || 3100;
