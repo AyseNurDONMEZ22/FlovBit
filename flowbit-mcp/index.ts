@@ -498,9 +498,9 @@ if (transport === "http") {
 
     app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
-    // 1. Cursor'ın ilk denediği deneysel POST metodunu temizce reddediyoruz (Log kirliliğini önler)
+    // 1. Cursor'ın deneysel POST isteğini temizce reddedip SSE'ye yönlendiriyoruz
     app.post("/mcp", (_req, res) => {
-      res.status(404).send("Lütfen SSE için GET /mcp kullanın.");
+      res.status(404).send("Lütfen SSE protokolünü kullanın.");
     });
 
     // 2. Cursor fallback yapıp GET ile asıl SSE bağlantısını kurar
@@ -516,20 +516,13 @@ if (transport === "http") {
       const sessionId = Math.random().toString(36).substring(2, 15);
       
       const server = createServer(token);
-      
-      // Query param yerine temiz URL kullanıyoruz (Proxy'lerde silinme riskine karşı)
       const sseTransport = new SSEServerTransport(`/messages/${sessionId}`, res);
 
       transports.set(sessionId, sseTransport);
       servers.set(sessionId, server);
 
-      // HATA BURADAYDI: res.on("close") çok erken tetikleniyordu. req.on("close") kullanıyoruz.
-      req.on("close", () => {
-        sseTransport.close();
-        server.close();
-        transports.delete(sessionId);
-        servers.delete(sessionId);
-      });
+      // DİKKAT: Erken kapanma sorununu önlemek için req.on("close") bloğunu sildik.
+      // Oturumlar hafızada güvende kalacak.
 
       await server.connect(sseTransport);
     });
