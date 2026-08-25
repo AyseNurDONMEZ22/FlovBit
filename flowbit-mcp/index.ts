@@ -486,58 +486,53 @@ async function main() {
     return;
   }
 
-if (transport === "http") {
+  if (transport === "http") {
     const { default: express } = await import("express");
-    const { SSEServerTransport } = await import("@modelcontextprotocol/sdk/server/sse.js");
-
     const app = express();
     app.use(express.json());
 
-    const transports = new Map<string, any>();
-    const servers = new Map<string, any>(); 
-
     app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
-    // 1. Cursor'ın deneysel POST isteğini temizce reddedip SSE'ye yönlendiriyoruz
-    app.post("/mcp", (_req, res) => {
-      res.status(404).send("Lütfen SSE protokolünü kullanın.");
-    });
-
-    // 2. Cursor fallback yapıp GET ile asıl SSE bağlantısını kurar
-    app.get("/mcp", async (req, res) => {
+    // Her istek KENDİ Authorization header'ını taşır — tek bir global token yok.
+    app.post("/mcp", async (req, res) => {
       const authHeader = req.headers["authorization"];
-      if (!authHeader || typeof authHeader !== "string" || !authHeader.startsWith("Bearer ")) {
+      if (!authHeader || Array.isArray(authHeader) || !authHeader.startsWith("Bearer ")) {
         res.status(401).json({ error: "Authorization: Bearer <API_KEY> header'ı gerekli" });
         return;
       }
       const token = authHeader.substring(7);
 
-      // Benzersiz oturum ID'si
-      const sessionId = Math.random().toString(36).substring(2, 15);
-      
       const server = createServer(token);
-      const sseTransport = new SSEServerTransport(`/messages/${sessionId}`, res);
-
-      transports.set(sessionId, sseTransport);
-      servers.set(sessionId, server);
-
-      // DİKKAT: Erken kapanma sorununu önlemek için req.on("close") bloğunu sildik.
-      // Oturumlar hafızada güvende kalacak.
-
-      await server.connect(sseTransport);
+      const httpTransport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+      res.on("close", () => {
+        httpTransport.close();
+        server.close();
+      });
+      await server.connect(httpTransport);
+      await httpTransport.handleRequest(req, res, req.body);
     });
 
-    // 3. Cursor komutları buraya POST eder
-    app.post("/messages/:sessionId", async (req, res) => {
-      const sessionId = req.params.sessionId;
-      const sseTransport = transports.get(sessionId);
+    // Bu sunucu stateless (session/SSE tutmuyor) — GET/DELETE'e 404 yerine
+    // 405 dönüyoruz ki client (Cursor vb.) "oturum koptu" sanıp sürekli
+    // yeniden denemesin ve sonunda bağlantıyı "tombstone" edip vazgeçmesin.
+    app.get("/mcp", async (_req, res) => {
+      res.writeHead(405).end(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          error: { code: -32000, message: "Method not allowed. This server is stateless (no SSE stream)." },
+          id: null,
+        })
+      );
+    });
 
-      if (!sseTransport) {
-        res.status(404).send("Geçersiz veya kapanmış oturum");
-        return;
-      }
-
-      await sseTransport.handlePostMessage(req, res);
+    app.delete("/mcp", async (_req, res) => {
+      res.writeHead(405).end(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          error: { code: -32000, message: "Method not allowed. This server is stateless (no sessions)." },
+          id: null,
+        })
+      );
     });
 
     const port = Number(process.env.PORT) || 3100;
