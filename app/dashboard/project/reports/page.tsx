@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-export default function ReportsPage() {
+function ReportsContent() {
   const searchParams = useSearchParams();
   const projectIdParam = searchParams.get("projectId");
   const savedProjectId = typeof window !== 'undefined' ? localStorage.getItem("currentProjectId") : null;
@@ -62,25 +62,22 @@ export default function ReportsPage() {
     const priority = issue.priority || "Medium";
     priorityDist[priority] = (priorityDist[priority] || 0) + 1;
     
-    // Atanan Kişi Dağılımı (Kullanıcı adını veya mailini alıyoruz)
+    // Atanan Kişi Dağılımı
     const assignee = issue.assigneeEmail && issue.assigneeEmail !== "Unassigned" 
-      ? issue.assigneeEmail.split('@')[0] // Sadece isim kısmını al
+      ? issue.assigneeEmail.split('@')[0] 
       : "Unassigned";
     assigneeDist[assignee] = (assigneeDist[assignee] || 0) + 1;
   });
 
   const statusesCount = Object.keys(statusDist).length;
-  // Sadece atanmış kişilerin sayısını bul (Unassigned hariç)
   const assigneesCount = Object.keys(assigneeDist).filter(a => a !== "Unassigned").length;
-  const overdueCount = 0; // İleride dueDate entegrasyonu tam yapıldığında burası dinamik olacak
+  const overdueCount = 0; 
 
-  // Yüzde hesaplama fonksiyonu (Progress bar için)
   const getPercentage = (count: number, total: number) => {
     if (total === 0) return 0;
     return Math.round((count / total) * 100);
   };
 
-  // Önceliklere göre renk atama
   const getPriorityColor = (priority: string) => {
     switch (priority.toLowerCase()) {
       case "high": case "critical": return "bg-orange-500";
@@ -229,5 +226,13 @@ export default function ReportsPage() {
 
       </div>
     </div>
+  );
+}
+
+export default function ReportsPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center p-10 text-gray-500">Raporlar yükleniyor...</div>}>
+      <ReportsContent />
+    </Suspense>
   );
 }
