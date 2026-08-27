@@ -669,7 +669,7 @@ function buildJs(baseUrl: string, ep: Endpoint, pathValues: Record<string, strin
   if (ep.body) headerLines.push(`    "Content-Type": "application/json",`);
   const headersBlock = headerLines.length ? `\n  headers: {\n${headerLines.join("\n")}\n  },` : "";
   const bodyBlock = ep.body ? `\n  body: JSON.stringify(${bodyText}),` : "";
-  return `const res = await fetch("${url}", {\n  method: "${ep.method}",${headersBlock}${bodyBlock}\n});\nconst data = await res.json();\nconsole.log(data);`;
+  return `const res = await fetch('${url}', {\n  method: "${ep.method}",${headersBlock}${bodyBlock}\n});\nconst data = await res.json();\nconsole.log(data);`;
 }
 
 function toPythonLiteral(jsonText: string): string {
