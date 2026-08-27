@@ -1,7 +1,6 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { FiX } from "react-icons/fi";
-// DİNAMİK ID İÇİN EKLENDİ
 import { useSearchParams } from "next/navigation"; 
 
 // API'den dönecek verinin tipi
@@ -15,7 +14,7 @@ interface Cycle {
   projectId: number;
 }
 
-export default function CyclesPage() {
+function CyclesContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [cycles, setCycles] = useState<Cycle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,7 +44,6 @@ export default function CyclesPage() {
     if (!currentProjectId) return; // ID yoksa istek atma
     const token = localStorage.getItem("token");
     try {
-      // DİNAMİK ID KULLANILIYOR
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/cycles/project/${currentProjectId}`, {
         headers: {
           "Authorization": `Bearer ${token}`
@@ -62,7 +60,7 @@ export default function CyclesPage() {
     }
   };
 
- const handleCreateCycle = async (e: React.FormEvent) => {
+  const handleCreateCycle = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentProjectId) return alert("Proje ID bulunamadı, işlem yapılamaz.");
     if (!name || !startDate || !endDate) return alert("Lütfen zorunlu alanları doldurun.");
@@ -79,7 +77,8 @@ export default function CyclesPage() {
     };
 
     try {
-      const response = await fetch("${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/cycles/create", {
+      // BURADAKİ BACKTICK DÜZELTİLDİ
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/cycles/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -98,13 +97,11 @@ export default function CyclesPage() {
     } catch (error) {
       console.error("Cycle oluşturulurken hata oluştu:", error);
     } finally {
-      // İŞLEM BİTİNCE BUTONUN KİLİDİNİ AÇ
       if (submitBtn) submitBtn.disabled = false;
     }
   };
-  
 
-  // Cycle Durumunu Güncelleme Fonksiyonu (Planning -> Active -> Closed)
+  // Cycle Durumunu Güncelleme Fonksiyonu
   const handleUpdateStatus = async (id: number, newStatus: string) => {
     const token = localStorage.getItem("token");
     try {
@@ -118,7 +115,7 @@ export default function CyclesPage() {
       });
 
       if (response.ok) {
-        fetchCycles(); // Listeyi güncelle
+        fetchCycles();
       } else {
         alert("Durum güncellenirken hata oluştu.");
       }
@@ -127,14 +124,12 @@ export default function CyclesPage() {
     }
   };
 
-  // Tarihleri DD.MM.YYYY formatına çevirir
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "";
     const d = new Date(dateStr);
     return d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '.');
   };
 
-  // Başlangıç, bitiş ve bugünün tarihine göre % ilerleme hesaplar
   const calculateProgress = (start: string, end: string) => {
     if (!start || !end) return 0;
     
@@ -151,7 +146,6 @@ export default function CyclesPage() {
     return Math.round((elapsed / totalDuration) * 100);
   };
 
-  // EĞER PROJE ID URL'DE YOKSA UYARI VER (Güvenlik Önlemi)
   if (!currentProjectId) {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center p-10">
@@ -180,7 +174,6 @@ export default function CyclesPage() {
           </p>
         </div>
 
-        {/* New Cycle Butonu */}
         <button 
           onClick={() => setIsModalOpen(true)}
           className="bg-blue-600 hover:bg-blue-700 dark:bg-[#5c9dff] dark:hover:bg-[#4a8bee] text-white dark:text-[#0b0d12] px-5 py-2.5 rounded-full text-[14px] font-bold transition-colors shadow-sm w-max cursor-pointer"
@@ -189,7 +182,7 @@ export default function CyclesPage() {
         </button>
       </div>
 
-      {/* Loading veya Liste/Boş Durum Gösterimi */}
+      {/* Loading veya Liste */}
       {isLoading ? (
         <div className="flex justify-center p-10 text-gray-500 dark:text-[#848d9c]">Yükleniyor...</div>
       ) : cycles.length === 0 ? (
@@ -217,8 +210,6 @@ export default function CyclesPage() {
               <div key={cycle.id} className="bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] p-6 rounded-2xl shadow-sm dark:shadow-none transition-colors">
                 
                 <div className="flex justify-between items-start">
-                  
-                  {/* Sol Kısım: Başlık, Durum, Hedef ve Tarih */}
                   <div>
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="text-[20px] font-bold text-slate-900 dark:text-white tracking-tight">{cycle.name}</h3>
@@ -242,7 +233,6 @@ export default function CyclesPage() {
                     </div>
                   </div>
 
-                  {/* Sağ Kısım: Aksiyon Butonu */}
                   {!isClosed && (
                     <button 
                       onClick={() => handleUpdateStatus(cycle.id, isActive ? 'Closed' : 'Active')}
@@ -257,7 +247,6 @@ export default function CyclesPage() {
                   )}
                 </div>
 
-                {/* Alt Kısım: Progress Bar */}
                 <div className="flex items-center gap-4">
                   <div className="flex-1 h-2.5 bg-gray-100 dark:bg-[#1e232d] rounded-full overflow-hidden">
                     <div 
@@ -278,7 +267,7 @@ export default function CyclesPage() {
         </div>
       )}
 
-      {/* New Cycle Modal (Açılır Pencere) */}
+      {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 dark:bg-[#0b0d12]/80 backdrop-blur-sm p-4">
           <div className="bg-white dark:bg-[#11141b] border border-gray-200 dark:border-[#1e232d] rounded-2xl w-full max-w-lg p-6 shadow-2xl relative transition-colors">
@@ -370,5 +359,14 @@ export default function CyclesPage() {
       )}
 
     </div>
+  );
+}
+
+// Ana Export Eden ve Suspense ile Saran Bileşen (Next.js kuralı gereği eklendi)
+export default function CyclesPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center p-10 text-gray-500">Yükleniyor...</div>}>
+      <CyclesContent />
+    </Suspense>
   );
 }
