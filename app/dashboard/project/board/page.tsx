@@ -1,10 +1,12 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { FiPlus, FiSearch, FiFilter, FiMoreHorizontal, FiX } from "react-icons/fi";
-import { useSearchParams } from "next/navigation";
-import { useRouter } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 
-export default function BoardPage() {
+// Çevre değişkenimizi tanımlıyoruz. Bulamazsa yerel sunucuya düşecek.
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
+
+function BoardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const projectIdParam = searchParams.get("projectId");
@@ -41,8 +43,7 @@ export default function BoardPage() {
     if (!token || !currentProjectId) return;
 
     try {
-      // Doğrudan Projeye ait görevleri çekiyoruz
-      const response = await fetch(`http://localhost:8081/api/v1/issues/project/${currentProjectId}`, {
+      const response = await fetch(`${API_URL}/api/v1/issues/project/${currentProjectId}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       
@@ -75,7 +76,7 @@ export default function BoardPage() {
 
     const token = localStorage.getItem("token");
     try {
-      const response = await fetch(`http://localhost:8081/api/v1/issues/${draggedIssueId}/status`, {
+      const response = await fetch(`${API_URL}/api/v1/issues/${draggedIssueId}/status`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ status: newStatus })
@@ -112,7 +113,7 @@ export default function BoardPage() {
     const token = localStorage.getItem("token");
 
     try {
-      const response = await fetch("http://localhost:8081/api/v1/issues/create", {
+      const response = await fetch(`${API_URL}/api/v1/issues/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({
@@ -367,7 +368,7 @@ export default function BoardPage() {
                   type="submit"
                   className="bg-blue-600 dark:bg-[#5c9dff] text-white dark:text-[#0b0d12] px-6 py-2 rounded-lg font-bold text-[13px] hover:bg-blue-700 dark:hover:bg-[#4a8bee] transition-colors cursor-pointer"
                 >
-                  Create Issue'yi Tamamla
+                  Create Issue
                 </button>
               </div>
             </form>
@@ -376,5 +377,18 @@ export default function BoardPage() {
       )}
 
     </div>
+  );
+}
+
+// Ana sayfa bileşenimizi Suspense ile sarıyoruz
+export default function BoardPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-full p-10 text-gray-500">
+        Board Yükleniyor...
+      </div>
+    }>
+      <BoardContent />
+    </Suspense>
   );
 }
