@@ -9,7 +9,7 @@ import { FiCopy, FiCheck, FiChevronDown, FiPlay, FiLoader, FiSearch } from "reac
 const API_PREFIX = "/api/v1";
 
 type Method = "GET" | "POST" | "PUT" | "DELETE";
-type EnvKey = "workspaceId" | "projectId" | "userId" | "issueId" | "notificationId" | "cycleId" | "apiKeyId";
+type EnvKey = "workspaceId" | "projectId" | "userId" | "issueId" | "notificationId" | "cycleId" | "apiKeyId" | "token";
 type Lang = "curl" | "js" | "python";
 
 interface ParamDef {
