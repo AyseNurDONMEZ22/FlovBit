@@ -67,7 +67,7 @@ export default function SettingsPage() {
     const token = localStorage.getItem("token");
 
     try {
-      const response = await fetch("http://localhost:8081/api/v1/users/update-profile", {
+      const response = await fetch("${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/users/update-profile", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -108,7 +108,7 @@ export default function SettingsPage() {
     const token = localStorage.getItem("token");
 
     try {
-      const response = await fetch("http://localhost:8081/api/v1/users/change-password", {
+      const response = await fetch("${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/users/change-password", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

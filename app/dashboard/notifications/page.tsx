@@ -17,7 +17,7 @@ export default function NotificationsPage() {
     if (!token || !email) return;
 
     try {
-      const response = await fetch(`http://localhost:8081/api/v1/notifications/user/${email}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/notifications/user/${email}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (response.ok) {
@@ -36,7 +36,7 @@ export default function NotificationsPage() {
     const token = localStorage.getItem("token");
     setNotifications(prev => prev.map(notif => notif.id === id ? { ...notif, read: true, isRead: true } : notif));
     try {
-      await fetch(`http://localhost:8081/api/v1/notifications/${id}/read`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/notifications/${id}/read`, {
         method: "PUT",
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -51,7 +51,7 @@ export default function NotificationsPage() {
     if (!token || !email) return;
     setNotifications(prev => prev.map(notif => ({ ...notif, read: true, isRead: true })));
     try {
-      await fetch(`http://localhost:8081/api/v1/notifications/user/${email}/read-all`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/notifications/user/${email}/read-all`, {
         method: "PUT",
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -69,7 +69,7 @@ export default function NotificationsPage() {
     if (!wsId) return;
 
     try {
-      const res = await fetch(`http://localhost:8081/api/v1/workspaces/members/${wsId}/accept-invite`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/workspaces/members/${wsId}/accept-invite`, {
         method: "PUT",
         headers: { "Authorization": `Bearer ${token}` }
       });

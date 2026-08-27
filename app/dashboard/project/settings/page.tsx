@@ -25,7 +25,7 @@ export default function ProjectSettingsPage() {
     const token = localStorage.getItem("token");
     try {
       // Backend'deki projeyi getiren API'ni kullanıyoruz
-      const response = await fetch(`http://localhost:8081/api/v1/projects/${currentProjectId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/projects/${currentProjectId}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (response.ok) {

@@ -32,7 +32,7 @@ function BacklogContent() {
     if (!token || !currentProjectId) return;
 
     try {
-      const response = await fetch(`http://localhost:8081/api/v1/issues/project/${currentProjectId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/issues/project/${currentProjectId}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       

@@ -46,7 +46,7 @@ export default function Dashboard() {
 
       try {
         // 1. Workspaces Çekimi
-        const res = await fetch(`http://localhost:8081/api/v1/workspaces/user/${email}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/workspaces/user/${email}`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (res.ok) {
@@ -54,7 +54,7 @@ export default function Dashboard() {
         }
 
         // 2. Bana Atanan Görevler
-        const issueRes = await fetch(`http://localhost:8081/api/v1/issues/assignee/${email}`, {
+        const issueRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/issues/assignee/${email}`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (issueRes.ok) {
@@ -66,7 +66,7 @@ export default function Dashboard() {
         if (savedProjectId) {
             // Projedeki tüm görevleri say
             try {
-                const pRes = await fetch(`http://localhost:8081/api/v1/issues/project/${savedProjectId}`, {
+                const pRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/issues/project/${savedProjectId}`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
                 if (pRes.ok) {
@@ -78,7 +78,7 @@ export default function Dashboard() {
             // Projedeki aktif döngüleri (sprints) say
             try {
                 // Eğer Cycle API ucun /api/v1/cycles/project/{id} ise bunu kullanır
-                const cRes = await fetch(`http://localhost:8081/api/v1/cycles/project/${savedProjectId}`, {
+                const cRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/cycles/project/${savedProjectId}`, {
                     headers: { "Authorization": `Bearer ${token}` }
                 });
                 if (cRes.ok) {
@@ -86,7 +86,7 @@ export default function Dashboard() {
                     setActiveCycles(cData.length);
                 } else {
                     // Alternatif olarak tüm cycle'ları çekmeyi dener
-                    const allCRes = await fetch(`http://localhost:8081/api/v1/cycles`, {
+                    const allCRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/cycles`, {
                       headers: { "Authorization": `Bearer ${token}` }
                     });
                     if (allCRes.ok) {
@@ -115,7 +115,7 @@ export default function Dashboard() {
         const email = localStorage.getItem("email");
 
         try {
-            const response = await fetch("http://localhost:8081/api/v1/workspaces/create", {
+            const response = await fetch("${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/workspaces/create", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

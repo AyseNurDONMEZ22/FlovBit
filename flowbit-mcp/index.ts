@@ -20,13 +20,13 @@ import {
  *   TOKEN yoktur, bu yüzden aynı anda birden fazla kullanıcı güvenle bağlanabilir.
  *
  * Ortam değişkenleri:
- *   FLOWBIT_API_BASE   backend adresi (varsayılan: http://localhost:8081/api/v1 —
+ *   FLOWBIT_API_BASE   backend adresi (varsayılan: ${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1 —
  *                       PRODUCTION'DA MUTLAKA deploy edilen backend URL'ine ayarla!)
  *   FLOWBIT_TOKEN       sadece stdio modunda kullanılır
  *   PORT                http modunda dinlenecek port (Railway otomatik atar)
  */
 
-const API_URL = process.env.FLOWBIT_API_BASE || "http://localhost:8081/api/v1";
+const API_URL = process.env.FLOWBIT_API_BASE || "${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1";
 
 /* ──────────────────────────── TOOL TANIMLARI ──────────────────────────── */
 

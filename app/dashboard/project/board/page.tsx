@@ -4,7 +4,7 @@ import { FiPlus, FiSearch, FiFilter, FiMoreHorizontal, FiX } from "react-icons/f
 import { useSearchParams, useRouter } from "next/navigation";
 
 // Çevre değişkenimizi tanımlıyoruz. Bulamazsa yerel sunucuya düşecek.
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}";
 
 function BoardContent() {
   const router = useRouter();

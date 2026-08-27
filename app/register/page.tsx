@@ -20,7 +20,7 @@ export default function AuthPage() {
 
     if (isLogin) {
       try {
-        const response = await fetch("http://localhost:8081/api/v1/auth/login", {
+        const response = await fetch("${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -50,7 +50,7 @@ export default function AuthPage() {
       }
     } else {
       try {
-        const response = await fetch("http://localhost:8081/api/v1/auth/register", {
+        const response = await fetch("${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -189,14 +189,14 @@ export default function AuthPage() {
           {/* Sosyal Giriş Butonları */}
           <div className="flex flex-col gap-3 mb-6">
             <a 
-              href="http://localhost:8081/oauth2/authorization/google"
+              href="${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/oauth2/authorization/google"
               className="flex items-center justify-center gap-3 w-full border border-gray-200 dark:border-[#1e232d] rounded-xl py-2.5 text-[15px] font-medium text-slate-700 dark:text-[#e2e8f0] hover:bg-gray-50 dark:hover:bg-[#11141b] transition-colors shadow-sm dark:shadow-none cursor-pointer"
             >
               <FcGoogle className="text-[20px]" />
               Continue with Google
             </a>
             <a 
-              href="http://localhost:8081/oauth2/authorization/github"
+              href="${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/oauth2/authorization/github"
               className="flex items-center justify-center gap-3 w-full border border-gray-200 dark:border-[#1e232d] rounded-xl py-2.5 text-[15px] font-medium text-slate-700 dark:text-[#e2e8f0] hover:bg-gray-50 dark:hover:bg-[#11141b] transition-colors shadow-sm dark:shadow-none cursor-pointer"
             >
               <FaGithub className="text-[19px] text-black dark:text-white" />

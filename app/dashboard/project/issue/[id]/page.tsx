@@ -23,7 +23,7 @@ export default function IssueDetailPage() {
   const fetchIssueDetails = async () => {
     const token = localStorage.getItem("token");
     try {
-      const response = await fetch(`http://localhost:8081/api/v1/issues/${issueId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/issues/${issueId}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (response.ok) {
@@ -50,7 +50,7 @@ export default function IssueDetailPage() {
     if (field === "assigneeEmail") setAssignee(value);
 
     try {
-      await fetch(`http://localhost:8081/api/v1/issues/${issueId}`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/issues/${issueId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify(updatedData)
@@ -66,7 +66,7 @@ export default function IssueDetailPage() {
     if (!window.confirm("Bu görevi silmek istediğinize emin misiniz?")) return;
     const token = localStorage.getItem("token");
     try {
-      const response = await fetch(`http://localhost:8081/api/v1/issues/${issueId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/issues/${issueId}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${token}` }
       });

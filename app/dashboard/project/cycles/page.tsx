@@ -46,7 +46,7 @@ export default function CyclesPage() {
     const token = localStorage.getItem("token");
     try {
       // DİNAMİK ID KULLANILIYOR
-      const response = await fetch(`http://localhost:8081/api/v1/cycles/project/${currentProjectId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/cycles/project/${currentProjectId}`, {
         headers: {
           "Authorization": `Bearer ${token}`
         }
@@ -79,7 +79,7 @@ export default function CyclesPage() {
     };
 
     try {
-      const response = await fetch("http://localhost:8081/api/v1/cycles/create", {
+      const response = await fetch("${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/cycles/create", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -108,7 +108,7 @@ export default function CyclesPage() {
   const handleUpdateStatus = async (id: number, newStatus: string) => {
     const token = localStorage.getItem("token");
     try {
-      const response = await fetch(`http://localhost:8081/api/v1/cycles/${id}/status`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/cycles/${id}/status`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

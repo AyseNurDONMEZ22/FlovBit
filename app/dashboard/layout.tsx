@@ -50,7 +50,7 @@ export default function DashboardLayout({
         setUserName(email.split('@')[0]); 
 
         if (token) {
-          fetch(`http://localhost:8081/api/v1/notifications/user/${email}`, {
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/notifications/user/${email}`, {
             headers: { "Authorization": `Bearer ${token}` }
           })
           .then(res => {
@@ -98,7 +98,7 @@ export default function DashboardLayout({
 
     try {
       // 1. Önce kullanıcının workspace'lerini çek
-      const wsRes = await fetch(`http://localhost:8081/api/v1/workspaces/user/${email}`, {
+      const wsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/workspaces/user/${email}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (!wsRes.ok) return;
@@ -107,7 +107,7 @@ export default function DashboardLayout({
       // 2. Her workspace için projeleri çekip tek bir listede birleştir
       let allProjects: any[] = [];
       for (const ws of workspaces) {
-        const pRes = await fetch(`http://localhost:8081/api/v1/projects/workspace/${ws.id}`, {
+        const pRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/projects/workspace/${ws.id}`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (pRes.ok) {
@@ -155,7 +155,7 @@ export default function DashboardLayout({
     if (submitBtn) submitBtn.disabled = true;
 
     try {
-      const response = await fetch("http://localhost:8081/api/v1/issues/create", {
+      const response = await fetch("${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/issues/create", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

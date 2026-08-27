@@ -30,7 +30,7 @@ export default function WorkspaceDetailPage() {
     const token = localStorage.getItem("token");
     const email = localStorage.getItem("email");
     try {
-      const wsRes = await fetch(`http://localhost:8081/api/v1/workspaces/user/${email}`, {
+      const wsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/workspaces/user/${email}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (wsRes.ok) {
@@ -39,14 +39,14 @@ export default function WorkspaceDetailPage() {
         setWorkspace(currentWs);
       }
 
-      const projRes = await fetch(`http://localhost:8081/api/v1/projects/workspace/${workspaceId}`, {
+      const projRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/projects/workspace/${workspaceId}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (projRes.ok) {
         setProjects(await projRes.json());
       }
 
-      const memRes = await fetch(`http://localhost:8081/api/v1/workspaces/members/${workspaceId}`, {
+      const memRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/workspaces/members/${workspaceId}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (memRes.ok) {
@@ -66,7 +66,7 @@ export default function WorkspaceDetailPage() {
 
     const token = localStorage.getItem("token");
     try {
-      const response = await fetch("http://localhost:8081/api/v1/projects/create", {
+      const response = await fetch("${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/projects/create", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -83,7 +83,7 @@ export default function WorkspaceDetailPage() {
         setIsCreatingProject(false);
         setProjectName("");
         setProjectDesc("");
-        const projRes = await fetch(`http://localhost:8081/api/v1/projects/workspace/${workspaceId}`, {
+        const projRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/projects/workspace/${workspaceId}`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (projRes.ok) setProjects(await projRes.json());
@@ -103,7 +103,7 @@ export default function WorkspaceDetailPage() {
 
     const token = localStorage.getItem("token");
     try {
-      const response = await fetch(`http://localhost:8081/api/v1/workspaces/members/${workspaceId}/add`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/workspaces/members/${workspaceId}/add`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -117,7 +117,7 @@ export default function WorkspaceDetailPage() {
 
       if (response.ok) {
         setInviteEmail("");
-        const memRes = await fetch(`http://localhost:8081/api/v1/workspaces/members/${workspaceId}`, {
+        const memRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/workspaces/members/${workspaceId}`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (memRes.ok) setMembers(await memRes.json());
@@ -134,13 +134,13 @@ export default function WorkspaceDetailPage() {
     
     const token = localStorage.getItem("token");
     try {
-      const response = await fetch(`http://localhost:8081/api/v1/workspaces/members/${workspaceId}/remove/${emailToRemove}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/workspaces/members/${workspaceId}/remove/${emailToRemove}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${token}` }
       });
 
       if (response.ok) {
-        const memRes = await fetch(`http://localhost:8081/api/v1/workspaces/members/${workspaceId}`, {
+        const memRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/workspaces/members/${workspaceId}`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (memRes.ok) setMembers(await memRes.json());
@@ -155,7 +155,7 @@ export default function WorkspaceDetailPage() {
   const handleUpdateRole = async (emailToUpdate: string, newRole: string) => {
     const token = localStorage.getItem("token");
     try {
-      const response = await fetch(`http://localhost:8081/api/v1/workspaces/members/${workspaceId}/update-role/${emailToUpdate}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/workspaces/members/${workspaceId}/update-role/${emailToUpdate}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -164,7 +164,7 @@ export default function WorkspaceDetailPage() {
         body: JSON.stringify({ role: newRole })
       });
       if (response.ok) {
-          const memRes = await fetch(`http://localhost:8081/api/v1/workspaces/members/${workspaceId}`, {
+          const memRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/workspaces/members/${workspaceId}`, {
             headers: { "Authorization": `Bearer ${token}` }
           });
           if (memRes.ok) setMembers(await memRes.json());

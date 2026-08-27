@@ -882,7 +882,7 @@ export default function ApiReferencePage() {
   const [tab, setTab] = useState<"rest" | "mcp-tools" | "mcp-setup">("rest");
   const [search, setSearch] = useState("");
   const [envData, setEnvData] = useState<EnvData>({
-    baseUrl: "http://localhost:8081",
+    baseUrl: "${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}",
     userId: "test@example.com",
     workspaceId: "1",
     projectId: "1",
