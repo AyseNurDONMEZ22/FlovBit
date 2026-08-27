@@ -1,9 +1,9 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
-export default function ProjectSettingsPage() {
+function ProjectSettingsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [project, setProject] = useState<any>(null);
@@ -24,7 +24,6 @@ export default function ProjectSettingsPage() {
   const fetchProjectDetails = async () => {
     const token = localStorage.getItem("token");
     try {
-      // Backend'deki projeyi getiren API'ni kullanıyoruz
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/projects/${currentProjectId}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -45,7 +44,6 @@ export default function ProjectSettingsPage() {
   };
 
   const handleDeleteProject = () => {
-    // Backend'de delete ucumuz hazır olduğunda burası çalışacak
     if (window.confirm("Bu projeyi tamamen silmek istediğinize emin misiniz? Bu işlem geri alınamaz!")) {
       alert("Proje silme işlemi için Backend API bekleniyor...");
     }
@@ -138,5 +136,13 @@ export default function ProjectSettingsPage() {
 
       </div>
     </div>
+  );
+}
+
+export default function ProjectSettingsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-gray-500">Ayarlar yükleniyor...</div>}>
+      <ProjectSettingsContent />
+    </Suspense>
   );
 }
