@@ -3,6 +3,7 @@ package com.example.demo.config;
 import java.util.Arrays;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -23,6 +24,10 @@ import com.example.demo.security.OAuth2SuccessHandler;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    // Dışarıdan FRONTEND_URL ortam değişkenini alıyoruz, bulamazsa localhost:3000 yapıyoruz.
+    @Value("${FRONTEND_URL:http://localhost:3000}")
+    private String frontendUrl;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -39,7 +44,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // 1. Selen'in Next.js (3000 portu) isteklerine kapıyı açıyoruz
+            // 1. Dinamik Frontend isteklerine kapıyı açıyoruz
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             
             // 2. Form güvenliğini (CSRF) şimdilik devredışı bırakıyoruz ki API'miz rahat çalışsın
@@ -72,8 +77,10 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Sadece 3000 portunda çalışan frontend'e izin veriyoruz
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
+        
+        // Hem canlı Railway adresine hem de yerel testler için localhost'a izin veriyoruz
+        configuration.setAllowedOrigins(Arrays.asList(frontendUrl, "http://localhost:3000"));
+        
         // Tüm HTTP metotlarına (POST, GET, OPTIONS vb.) kapıyı açıyoruz
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*")); 

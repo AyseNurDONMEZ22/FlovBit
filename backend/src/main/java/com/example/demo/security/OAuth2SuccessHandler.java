@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -24,6 +25,10 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
     @Autowired
     private UserRepository userRepository;
+
+    // Dışarıdan FRONTEND_URL ortam değişkenini alıyoruz, bulamazsa localhost:3000 yapıyoruz.
+    @Value("${FRONTEND_URL:http://localhost:3000}")
+    private String frontendUrl;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
@@ -61,8 +66,8 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         // 3. Bizim sisteme özel JWT Bileti (Token) üret
         String token = jwtUtil.generateToken(user.getEmail());
 
-        // 4. Bilet ve e-postayı URL'ye ekleyip doğrudan Next.js Dashboard'a Işınla!
-        String redirectUrl = "http://localhost:3000/dashboard?token=" + token + "&email=" + user.getEmail();
+        // 4. Bilet ve e-postayı URL'ye ekleyip Dinamik Frontend Adresine Işınla!
+        String redirectUrl = frontendUrl + "/dashboard?token=" + token + "&email=" + user.getEmail();
         response.sendRedirect(redirectUrl);
     }
 }
