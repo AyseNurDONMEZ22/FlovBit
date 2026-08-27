@@ -4,7 +4,6 @@ Welcome to **FlovBit**, a modern and intuitive project management platform desig
 
 🌐 **[Try FlovBit Live Now](https://thorough-respect-production-5332.up.railway.app/)**
 
-![FlovBit Dashboard Preview](https://via.placeholder.com/1000x500.png?text=Add+Your+Dashboard+Screenshot+Here)
 
 ## 💡 What is FlovBit?
 FlovBit is built for teams who want to focus on doing the work rather than managing it. Whether you are tracking daily tasks, planning long-term cycles, or managing a complex backlog, FlovBit provides the tools you need in a clean, distraction-free interface.
