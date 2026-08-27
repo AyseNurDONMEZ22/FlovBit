@@ -115,7 +115,7 @@ export default function Dashboard() {
         const email = localStorage.getItem("email");
 
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/workspaces/create", {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/workspaces/create`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

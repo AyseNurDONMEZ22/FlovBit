@@ -66,7 +66,7 @@ export default function WorkspaceDetailPage() {
 
     const token = localStorage.getItem("token");
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/projects/create", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/projects/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

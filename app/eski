@@ -18,7 +18,7 @@ export default function Dashboard() {
     useEffect(() => {
       const fetchData = async () => {
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/workspaces/user/chfdh@gmail.com");
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/v1/workspaces/user/chfdh@gmail.com');
           const data = await res.json();
           setWorkspaces(data);
         } catch (err) {
