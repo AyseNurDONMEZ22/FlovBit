@@ -12,29 +12,29 @@ FlovBit is built for teams who want to focus on doing the work rather than manag
 
 ### 1. Create Your Workspace
 * **Sign Up/Login:** Get started in seconds using your email or Google account.
-* **Workspaces:** Create a dedicated workspace for your company or team to keep all projects isolated and organized[cite: 1].
-* **Invite Members:** Collaborate by adding team members to your workspace[cite: 1].
+* **Workspaces:** Create a dedicated workspace for your company or team to keep all projects isolated and organized.
+* **Invite Members:** Collaborate by adding team members to your workspace.
 
 ### 2. Organize Your Projects
-* **Backlog:** Dump all your ideas, upcoming features, and bug fixes into the Project Backlog[cite: 1].
-* **Active Board:** Move tasks to the Kanban-style Board to track what is *To Do*, *In Progress*, and *Done* visually[cite: 1].
+* **Backlog:** Dump all your ideas, upcoming features, and bug fixes into the Project Backlog.
+* **Active Board:** Move tasks to the Kanban-style Board to track what is *To Do*, *In Progress*, and *Done* visually.
 
 ### 3. Plan in Cycles
-* Instead of endless lists, use **Cycles** (similar to sprints) to timebox your team's effort and focus on what matters most for the upcoming weeks[cite: 1].
+* Instead of endless lists, use **Cycles** (similar to sprints) to timebox your team's effort and focus on what matters most for the upcoming weeks.
 
 ### 4. Track Issues & Reports
-* **Issue Tracking:** Create detailed issues, assign them to team members, and discuss details in the comments[cite: 1].
-* **Reports:** View project progress and team productivity at a glance[cite: 1].
+* **Issue Tracking:** Create detailed issues, assign them to team members, and discuss details in the comments.
+* **Reports:** View project progress and team productivity at a glance.
 
 ## ⚙️ Account & Security
-* Manage your personal profile, upload a custom avatar, and maintain account security through the dedicated Settings panel[cite: 1].
-* Secure authentication ensures your project data remains private and protected[cite: 1].
+* Manage your personal profile, upload a custom avatar, and maintain account security through the dedicated Settings panel.
+* Secure authentication ensures your project data remains private and protected.
 
 ---
 
 ### 🛠️ Powered By
 *While this project is closed for external cloning, here is a peek under the hood at the technologies powering FlovBit:*
-* **Frontend:** Next.js, React, Tailwind CSS[cite: 1]
-* **Backend:** Java Spring Boot, Spring Security (JWT & OAuth2)[cite: 1]
+* **Frontend:** Next.js, React, Tailwind CSS
+* **Backend:** Java Spring Boot, Spring Security (JWT & OAuth2)
 * **Database & Storage:** Supabase (Avatars) & PostgreSQL
 * **Hosting:** Deployed seamlessly on Railway
